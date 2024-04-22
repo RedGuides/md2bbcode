@@ -1,6 +1,6 @@
 from mistune.core import BaseRenderer
 from mistune.util import escape as escape_text, striptags, safe_entity
-import re
+from urllib.parse import urljoin, urlparse
 
 
 class BBCodeRenderer(BaseRenderer):
@@ -8,12 +8,12 @@ class BBCodeRenderer(BaseRenderer):
     _escape: bool
     NAME = 'bbcode'
 
-    def __init__(self, escape=False):
+    def __init__(self, escape=False, domain=None):
         super(BBCodeRenderer, self).__init__()
         self._escape = escape
+        self.domain = domain
 
     def render_token(self, token, state):
-        # backward compitable with v2
         func = self._get_method(token['type'])
         attrs = token.get('attrs')
 
@@ -35,6 +35,9 @@ class BBCodeRenderer(BaseRenderer):
         # Simple URL sanitization
         if url.startswith(('javascript:', 'vbscript:', 'data:')):
             return '#harmful-link'
+        # Check if the URL is absolute by looking for a netloc part in the URL
+        if not urlparse(url).netloc:
+            url = urljoin(self.domain, url)
         return url
 
     def text(self, text: str) -> str:
@@ -61,7 +64,7 @@ class BBCodeRenderer(BaseRenderer):
         return '\n'
 
     def softbreak(self) -> str:
-        return '\n'
+        return ''
 
     def inline_html(self, html: str) -> str:
         if self._escape:
@@ -75,7 +78,7 @@ class BBCodeRenderer(BaseRenderer):
         if 1 <= level <= 3:
             return f"[HEADING={level}]{text}[/HEADING]\n"
         else:
-            # Handle cases where level is outside 1-3, you might want to default to level 3 or treat as normal text
+            # Handle cases where level is outside 1-3
             return f"[HEADING=3]{text}[/HEADING]\n"
     
     def blank_line(self) -> str:
@@ -87,15 +90,25 @@ class BBCodeRenderer(BaseRenderer):
     def block_text(self, text: str) -> str:
         return text
     
-    def block_code(self, code: str, info=None) -> str:
-        """Renders blocks of code with optional language specification for BBCode."""
-        if info is not None:
-            # Extract the first word from `info` as the language
-            lang = safe_entity(info.strip()).split(None, 1)[0]
-            return f"[CODE={lang}]{escape_text(code)}[/CODE]\n\n"
+    def block_code(self, code: str, **attrs) -> str:
+        # Renders blocks of code using the language specified in Markdown
+        special_cases = {
+            'plaintext': None  # Default [CODE]
+        }
+
+        if 'info' in attrs:
+            lang_info = safe_entity(attrs['info'].strip())
+            lang = lang_info.split(None, 1)[0].lower()
+            # Check if the language needs special handling
+            bbcode_lang = special_cases.get(lang, lang)  # Use the special case if it exists, otherwise use lang as is
+            if bbcode_lang:
+                return f"[CODE={bbcode_lang}]{escape_text(code)}[/CODE]\n\n"
+            else:
+                return f"[CODE]{escape_text(code)}[/CODE]\n\n"
         else:
+            # No language specified, render with a generic [CODE] tag
             return f"[CODE]{escape_text(code)}[/CODE]\n\n"
-        
+
     def block_quote(self, text: str) -> str:
         return '[QUOTE]\n' + text + '[/QUOTE]\n'
 
@@ -105,19 +118,99 @@ class BBCodeRenderer(BaseRenderer):
         return html + '\n'
 
     def block_error(self, text: str) -> str:
-        """
-        Render an error block in BBCode. 
-        We'll simulate an error block by using a color tag to change the text color to red, 
-        which is a common practice for indicating errors. The '[code]' tag is used to preserve formatting.
-        """
         return '[color=red][icode]' + text + '[/icode][/color]\n'
 
     def list(self, text: str, ordered: bool, **attrs) -> str:
         tag = 'list' if not ordered else 'list=1'
-        return '[{}]'.format(tag) + text + '[/{}]\n'.format(tag)
+        return '[{}]'.format(tag) + text + '[/list]\n'
 
     def list_item(self, text: str) -> str:
         return '[*]' + text + '\n'
     
     def strikethrough(self, text: str) -> str:
         return '[s]' + text + '[/s]'
+    
+    def mark(self, text: str) -> str:
+        # Simulate the mark effect with a background color in BBCode
+        return '[mark]' + text + '[/mark]'
+
+    def insert(self, text: str) -> str:
+        # Use underline to represent insertion
+        return '[u]' + text + '[/u]'
+
+    def superscript(self, text: str) -> str:
+        return '[sup]' + text + '[/sup]'
+
+    def subscript(self, text: str) -> str:
+        return '[sub]' + text + '[/sub]'
+    
+    def inline_spoiler(self, text: str) -> str:
+        return '[ISPOILER]' + text + '[/ISPOILER]'
+
+    def block_spoiler(self, text: str) -> str:
+        return '[SPOILER]\n' + text + '\n[/SPOILER]'
+
+    def footnote_ref(self, key: str, index: int):
+        # Use superscript for the footnote reference
+        return f'[sup][u][JUMPTO=fn-{index}]{index}[/JUMPTO][/u][/sup]'
+
+    def footnotes(self, text: str):
+        # Optionally wrap all footnotes in a specific section if needed
+        return '[b]Footnotes:[/b]\n' + text
+
+    def footnote_item(self, text: str, key: str, index: int):
+        # Define the footnote with an anchor at the end of the document
+        return f'[ANAME=fn-{index}]{index}[/ANAME]. {text}'
+    
+    def table(self, children, **attrs):
+        # Starting with a full-width table by default if not specified
+        # width = attrs.get('width', '100%') # comment out until XF 2.3
+        # return f'[TABLE width="{width}"]\n' + children + '[/TABLE]\n' # comment out until XF 2.3
+        return '[TABLE]\n' + children + '[/TABLE]\n'
+
+    def table_head(self, children, **attrs):
+        return '[TR]\n' + children + '[/TR]\n'
+
+    def table_body(self, children, **attrs):
+        return children
+
+    def table_row(self, children, **attrs):
+        return '[TR]\n' + children + '[/TR]\n'
+
+    def table_cell(self, text, align=None, head=False, **attrs):
+        # BBCode does not support direct cell alignment, use [LEFT], [CENTER], or [RIGHT] tags
+        alignment_tag = ''
+        if align == 'center':
+            alignment_tag = 'CENTER'
+        elif align == 'right':
+            alignment_tag = 'RIGHT'
+        elif align == 'left':
+            alignment_tag = 'LEFT'
+
+        # Use th for header cells and td for normal cells
+        tag = 'TH' if head else 'TD'
+        # width = attrs.get('width') # comment out until XF 2.3
+        # width_attr = f' width="{width}"' if width else '' # comment out until XF 2.3
+        
+        # return f'[{tag}{width_attr}][{alignment_tag}]{text}[/{alignment_tag}][/{tag}]\n' # comment out until XF 2.3
+        return f'[{tag}][{alignment_tag}]{text}[/{alignment_tag}][/{tag}]\n'
+
+    def task_list_item(self, text: str, checked: bool = False) -> str:
+        # Using emojis to represent the checkbox
+        checkbox_emoji = '🗹' if checked else '☐'
+        return checkbox_emoji + ' ' + text + '\n'
+
+    def def_list(self, text: str) -> str:
+        # No specific BBCode tag for <dl>, so we just use the plain text grouping
+        return '\n' + text + '\n'
+
+    def def_list_head(self, text: str) -> str:
+        return '[b]' + text + '[/b]' + ' ' + ':' + '\n'
+
+    def def_list_item(self, text: str) -> str:
+        return '[INDENT]' + text + '[/INDENT]\n'
+    
+    def abbr(self, text: str, title: str) -> str:
+        if title:
+            return f'[abbr={title}]{text}[/abbr]'
+        return text
