@@ -3,7 +3,7 @@
 Converts Markdown to a Xenforo flavor BBCode with a few tags custom to RedGuides. You can supply a domain name as well to parse relative URLs. 
 
 ### Usage
-Placed in a /renderers subfolder of your project,
+Placed in a `/renderers` subfolder of your project,
 
 ```python 
 import mistune
