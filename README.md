@@ -5,9 +5,9 @@ Converts Markdown to a Xenforo flavor BBCode with a few tags custom to RedGuides
 Usage:
 Placed in a /renderers subfolder of your project,
 
-'''python 
+```python 
 import mistune
 from renderers.bbcode import BBCodeRenderer
 
-mistune.create_markdown(renderer=BBCodeRenderer(domain='https://github.com/RedGuides/mistunebbcode/'))
-'''
+mistune.create_markdown(renderer=BBCodeRenderer(domain='https://github.com/RedGuides/MistuneBBCode/'))
+```
