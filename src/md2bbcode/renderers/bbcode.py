@@ -55,7 +55,8 @@ class BBCodeRenderer(BaseRenderer):
         return '[url=' + self.safe_url(url) + ']' + text + '[/url]'
 
     def image(self, text: str, url: str, title=None) -> str:
-        return '[img]' + self.safe_url(url) + '[/img]'
+        alt_text = f' alt="{text}"' if text else ''
+        return f'[img{alt_text}]' + self.safe_url(url) + '[/img]'
 
     def codespan(self, text: str) -> str:
         return '[icode]' + text + '[/icode]'
@@ -178,22 +179,27 @@ class BBCodeRenderer(BaseRenderer):
         return '[TR]\n' + children + '[/TR]\n'
 
     def table_cell(self, text, align=None, head=False, **attrs):
-        # BBCode does not support direct cell alignment, use [LEFT], [CENTER], or [RIGHT] tags
-        alignment_tag = ''
-        if align == 'center':
-            alignment_tag = 'CENTER'
-        elif align == 'right':
-            alignment_tag = 'RIGHT'
-        elif align == 'left':
-            alignment_tag = 'LEFT'
+        # BBCode does not support direct cell alignment,
+        # use [LEFT], [CENTER], or [RIGHT] tags
 
         # Use th for header cells and td for normal cells
         tag = 'TH' if head else 'TD'
-        # width = attrs.get('width') # comment out until XF 2.3
-        # width_attr = f' width="{width}"' if width else '' # comment out until XF 2.3
-        
-        # return f'[{tag}{width_attr}][{alignment_tag}]{text}[/{alignment_tag}][/{tag}]\n' # comment out until XF 2.3
-        return f'[{tag}][{alignment_tag}]{text}[/{alignment_tag}][/{tag}]\n'
+
+        # Initialize alignment tags
+        alignment_start = ''
+        alignment_end = ''
+
+        if align == 'center':
+            alignment_start = '[CENTER]'
+            alignment_end = '[/CENTER]'
+        elif align == 'right':
+            alignment_start = '[RIGHT]'
+            alignment_end = '[/RIGHT]'
+        elif align == 'left':
+            alignment_start = '[LEFT]'
+            alignment_end = '[/LEFT]'
+
+        return f'[{tag}]{alignment_start}{text}{alignment_end}[/{tag}]\n'
 
     def task_list_item(self, text: str, checked: bool = False) -> str:
         # Using emojis to represent the checkbox

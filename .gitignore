@@ -5,3 +5,5 @@ readme.finalpass
 output.json
 testme.md
 test2.md
+dist/
+readme.ast

@@ -1,30 +1,33 @@
-# uses a custom renderer to convert Markdown to BBCode. The custom renderer is defined in the bbcode.py file.
-# pass --debug to save the output to readme.1stpass (md2bbcode) and readme.finalpass (html2bbcode)
+# uses a custom mistune renderer to convert Markdown to BBCode. The custom renderer is defined in the bbcode.py file.
+# pass --debug to save the output to readme.1stpass (main.py) and readme.finalpass (html2bbcode)
 # for further debugging, you can convert the markdown file to AST using md2ast.py. Remember to load the plugin(s) you want to test.
+
+#standard library
 import argparse
+import sys
+
+# mistune
 import mistune
-from renderers.bbcode import BBCodeRenderer
 from mistune.plugins.formatting import strikethrough, mark, superscript, subscript, insert
-from mistune.plugins.table import table
+from mistune.plugins.table import table, table_in_list
 from mistune.plugins.footnotes import footnotes
 from mistune.plugins.task_lists import task_lists
 from mistune.plugins.def_list import def_list
 from mistune.plugins.abbr import abbr
 from mistune.plugins.spoiler import spoiler
 
-from html2bbcode import process_html
+# local
+from .renderers.bbcode import BBCodeRenderer
+from .html2bbcode import process_html
 
 def convert_markdown_to_bbcode(markdown_text, domain):
     # Create a Markdown parser instance using the custom BBCode renderer
-    markdown_parser = mistune.create_markdown(renderer=BBCodeRenderer(domain=domain), plugins=[strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler])
+    markdown_parser = mistune.create_markdown(renderer=BBCodeRenderer(domain=domain), plugins=[strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler, table_in_list])
 
     # Convert Markdown text to BBCode
     return markdown_parser(markdown_text)
 
-def process_readme(input_filepath, domain, debug=False):
-    with open(input_filepath, 'r', encoding='utf-8') as md_file:
-        markdown_text = md_file.read()
-
+def process_readme(markdown_text, domain, debug=False):
     # Convert Markdown to BBCode
     bbcode_text = convert_markdown_to_bbcode(markdown_text, domain)
 
@@ -45,8 +48,15 @@ def main():
     parser.add_argument('--debug', action='store_true', help='Output intermediate results to files for debugging')
     args = parser.parse_args()
 
+    if args.input == '-':
+        # Read Markdown content from stdin
+        markdown_text = sys.stdin.read()
+    else:
+        with open(args.input, 'r', encoding='utf-8') as md_file:
+            markdown_text = md_file.read()
+
     # Process the readme and get the final BBCode
-    final_bbcode = process_readme(args.input, args.domain, args.debug)
+    final_bbcode = process_readme(markdown_text, args.domain, args.debug)
 
     # Optionally, print final BBCode to console
     if not args.debug:

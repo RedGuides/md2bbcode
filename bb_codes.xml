@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bb_codes>
+  <bb_code bb_code_id="abbr" bb_code_mode="replace" has_option="yes" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" editor_icon_type="fa" editor_icon_value="acorn" title="Abbreviation">
+    <desc><![CDATA[defines an abbreviation or an acronym]]></desc>
+    <example><![CDATA[The [abbr=World Health Organization]WHO[/abbr] was founded in 1948.]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<abbr title="{option}">{text}</abbr>]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
+  <bb_code bb_code_id="aname" bb_code_mode="replace" has_option="yes" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" title="Anchor">
+    <desc><![CDATA[Anchor links allow you to link to different places within a post. Use in conjunction with JUMPTO]]></desc>
+    <example><![CDATA[[aname=variable]This is the target of the link[/aname]]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<a name="{option}">{text}</a>]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
+  <bb_code bb_code_id="hr" bb_code_mode="replace" has_option="no" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="1" allow_signature="1" editor_icon_type="fa" editor_icon_value="horizontal-rule" title="Horizontal Rule">
+    <desc><![CDATA[]]></desc>
+    <example><![CDATA[[hr]This text will not appear in the output[/hr]]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<hr class="memberHeader-separator">]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
+  <bb_code bb_code_id="jumpto" bb_code_mode="replace" has_option="yes" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" title="Anchor Link">
+    <desc><![CDATA[Anchor links allow you to link to different places within a post. Use in conjunction with ANAME.]]></desc>
+    <example><![CDATA[[jumpto=variable]This is the link, it will take you to the target[/jumpto]]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<a href="#{option}">{text}</a>]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
+  <bb_code bb_code_id="mark" bb_code_mode="replace" has_option="no" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" editor_icon_type="fa" editor_icon_value="highlighter" title="Mark">
+    <desc><![CDATA[Text that should be marked or highlighted.]]></desc>
+    <example><![CDATA[Don't forget to buy [mark]milk[/mark] for your toons.]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<mark>{text}</mark>]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
+</bb_codes>

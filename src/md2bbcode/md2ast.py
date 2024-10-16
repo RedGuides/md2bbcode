@@ -1,9 +1,9 @@
-# this is for debugging mistune and my custom bbcode renderer. 
+# this is for debugging the custom mistune renderer bbcode.py
 import argparse
 import mistune
 import json  # Import the json module for serialization
 from mistune.plugins.formatting import strikethrough, mark, superscript, subscript, insert
-from mistune.plugins.table import table
+from mistune.plugins.table import table, table_in_list
 from mistune.plugins.footnotes import footnotes
 from mistune.plugins.task_lists import task_lists
 from mistune.plugins.def_list import def_list
@@ -12,7 +12,7 @@ from mistune.plugins.spoiler import spoiler
 
 def convert_markdown_to_ast(input_filepath, output_filepath):
     # Initialize Markdown parser with no renderer to produce an AST
-    markdown_parser = mistune.create_markdown(renderer=None, plugins=[strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler])
+    markdown_parser = mistune.create_markdown(renderer=None, plugins=[strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler, table_in_list])
     
     # Read the input Markdown file
     with open(input_filepath, 'r', encoding='utf-8') as md_file:

@@ -1,7 +1,7 @@
 # converts some HTML tags to BBCode
 # pass --debug to save the output to readme.finalpass
 # may be better off replacing this with html to markdown (and then to bbcode). Lepture recommeds a JS html to markdown converter: sundown
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup
 import argparse
 
 def handle_font_tag(tag, replacements):

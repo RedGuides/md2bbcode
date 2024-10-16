@@ -1,66 +1,104 @@
-![Logo](./logo.png)
+![md2bbcode logo](https://www.redguides.com/images/md2bbcode-logo.png)
 
-# md2bbcode.py
-## Convert Markdown to BBCode
-The main script. Converts github-flavor Markdown to Xenforo/RedGuides-flavor BBCode.
+# md2bbcode
+**A wrapper and plugin for [Mistune](https://github.com/lepture/mistune).** It converts GitHub-flavored Markdown to Xenforo-flavored BBCode. Custom BBCodes made for RedGuides are included in `bb_codes.xml`.
 
-```plaintext
-usage: md2bbcode.py [-h] [--domain DOMAIN] [--debug] input
+## Installation
 
-Convert Markdown file to BBCode with HTML processing.
+You can install md2bbcode using pip:
 
-positional arguments:
-  input            Input Markdown file path
-
-options:
-  -h, --help       show this help message and exit
-  --domain DOMAIN  Domain to prepend to relative URLs
-  --debug          Output intermediate results to files for debugging
+```bash
+pip install md2bbcode
 ```
 
-# html2bbcode.py
-## Converts HTML tags to BBCode
-Converts HTML tags to BBCode, since those are sometimes used in markdown. It's not ideal, see a better solution in the file comments.
+## Usage
 
-```plaintext
-usage: html2bbcode.py [-h] [--debug] input_file
+After installation, you can use md2bbcode from the command line:
 
-Convert HTML to BBCode with optional debugging output.
-
-positional arguments:
-  input_file  Input HTML file path
-
-options:
-  -h, --help  show this help message and exit
-  --debug     Save output to readme.finalpass for debugging
+```bash
+md2bbcode README.md
 ```
 
-# md2ast.py
-## For debugging Mistune's renderer
-```plaintext
-usage: md2ast.py [-h] input output
+If the markdown includes relative images or other assets, you can use the --domain flag to prepend a domain to the relative URLs:
 
-Convert Markdown file to AST file (JSON format).
-
-positional arguments:
-  input       Input Markdown file path
-  output      Output AST file path (JSON format)
-
-options:
-  -h, --help  show this help message and exit
+```bash
+md2bbcode README.md --domain https://raw.githubusercontent.com/RedGuides/md2bbcode/main/
 ```
 
-# renderers/bbcode.py
-## BBCode Renderer for [Mistune v3.0.2](https://github.com/lepture/mistune/releases/tag/v3.0.2)
+### Debug Mode
 
-Custom renderer for Mistune
+You can use the `--debug` flag to save intermediate results to files for debugging:
 
-### Usage
-Placed in a `/renderers` subfolder of your project,
-
-```python 
-import mistune
-from renderers.bbcode import BBCodeRenderer
-
-mistune.create_markdown(renderer=BBCodeRenderer(domain='https://raw.githubusercontent.com/user/repo/branch'))
+```bash
+md2bbcode README.md --debug
 ```
+
+## Development
+
+If you want to contribute to md2bbcode or set up a development environment, follow these steps:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/RedGuides/md2bbcode.git
+   cd md2bbcode
+   ```
+
+2. Install Hatch, which is used for building and managing the project:
+   ```bash
+   pip install hatch
+   ```
+
+3. Create a development environment and install dependencies:
+   ```bash
+   hatch env create
+   ```
+
+4. Activate the development environment:
+   ```bash
+   hatch shell
+   ```
+
+### renderers/bbcode.py
+
+The custom plugin for Mistune, which converts AST to bbcode.[^1]
+
+[^1]: Mistune does not convert Markdown HTML to AST, hence the need for `html2bbcode`.
+
+## Additional Tools
+
+### html2bbcode
+
+Converts several HTML tags typically allowed in Markdown to BBCode.[^2]
+
+[^2]: Currently used for post-processing mistune output, but there's a better way. See inside the file for a suggestion.
+
+```bash
+html2bbcode input_file.html
+```
+
+### md2ast
+
+For debugging Mistune's renderer, converts a Markdown file to AST (JSON format).
+
+```bash
+md2ast input.md output.json
+```
+
+## Features Test
+
+Here are a few GitHub-flavored Markdown features so you can use this README.md for testing:
+
+- **Strikethrough:** ~~This text is struck through.~~
+- **Superscript:** This text is normal and this is <sup>superscript</sup>.
+- **Spoiler:** >!This is a spoiler!<
+- **Table:**
+
+  | Syntax      | Description |
+  | ----------- | ----------- |
+  | Header      | Title       |
+  | Paragraph   | Text        |
+
+## Todo
+
+- refactor html2bbcode
+- update for new Xenforo 2.3 and 2.4 BBCode
