@@ -35,8 +35,11 @@ from md2bbcode.main import process_readme
 # Your Markdown content
 markdown_text = "# Hell World"
 
+# Optional domain to prepend to relative URLs
+domain = 'https://raw.githubusercontent.com/yourusername/yourrepo/main/'
+
 # Convert Markdown to BBCode
-bbcode_output = process_readme(markdown_text)
+bbcode_output = process_readme(markdown_text, domain=domain)
 
 # Output the BBCode
 print(bbcode_output)

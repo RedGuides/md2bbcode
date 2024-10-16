@@ -27,7 +27,7 @@ def convert_markdown_to_bbcode(markdown_text, domain):
     # Convert Markdown text to BBCode
     return markdown_parser(markdown_text)
 
-def process_readme(markdown_text, domain, debug=False):
+def process_readme(markdown_text, domain=None, debug=False):
     # Convert Markdown to BBCode
     bbcode_text = convert_markdown_to_bbcode(markdown_text, domain)
 
