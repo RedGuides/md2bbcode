@@ -27,6 +27,21 @@ If the markdown includes relative images or other assets, you can use the --doma
 md2bbcode README.md --domain https://raw.githubusercontent.com/RedGuides/md2bbcode/main/
 ```
 
+You can also use the package in your Python project:
+
+```python
+from md2bbcode.main import process_readme
+
+# Your Markdown content
+markdown_text = "# Hell World"
+
+# Convert Markdown to BBCode
+bbcode_output = process_readme(markdown_text)
+
+# Output the BBCode
+print(bbcode_output)
+```
+
 ### Debug Mode
 
 You can use the `--debug` flag to save intermediate results to files for debugging:
@@ -34,7 +49,6 @@ You can use the `--debug` flag to save intermediate results to files for debuggi
 ```bash
 md2bbcode README.md --debug
 ```
-
 ## Development
 
 If you want to contribute to md2bbcode or set up a development environment, follow these steps:
