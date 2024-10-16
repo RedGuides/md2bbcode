@@ -26,9 +26,14 @@ jobs:
       - name: Install Hatch
         uses: pypa/hatch@install
 
+      - name: Run Tests
+        run: |
+          hatch test
+
       - name: Build Package
         run: |
           hatch build
 
       - name: Publish to PyPI
+        if: ${{ success() }}
         uses: pypa/gh-action-pypi-publish@release/v1
