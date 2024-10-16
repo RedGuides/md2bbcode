@@ -1,3 +1,5 @@
+[![Publish to PyPI](https://github.com/RedGuides/md2bbcode/actions/workflows/publish.yml/badge.svg)](https://github.com/RedGuides/md2bbcode/actions/workflows/publish.yml)
+
 ![md2bbcode logo](https://www.redguides.com/images/md2bbcode-logo.png)
 
 # md2bbcode
