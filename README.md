@@ -90,7 +90,6 @@ Here are a few GitHub-flavored Markdown features so you can use this README.md f
 
 - **Strikethrough:** ~~This text is struck through.~~
 - **Superscript:** This text is normal and this is <sup>superscript</sup>.
-- **Spoiler:** >!This is a spoiler!<
 - **Table:**
 
   | Syntax      | Description |
