@@ -38,8 +38,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-source = "git"
-pattern = "^v(?P<version>.*)$"
+source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 include = [
