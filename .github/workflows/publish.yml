@@ -3,11 +3,11 @@ name: Publish to PyPI
 on:
   push:
     tags:
-      - 'v*.*.*'  # Adjust the pattern to match your versioning scheme
+      - 'v*.*.*'
 
 permissions:
   contents: read
-  id-token: write  # Required for OIDC
+  id-token: write  # Required for PyPI Trusted Publishing
 
 jobs:
   build-and-publish:
@@ -15,16 +15,16 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Ensure full Git history is available for versioning
 
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
-      - name: Install Dependencies
-        run: |
-          pip install --upgrade pip
-          pip install hatch
+      - name: Install Hatch
+        uses: pypa/hatch@install
 
       - name: Build Package
         run: |
