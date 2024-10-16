@@ -58,6 +58,9 @@ def recursive_html_to_bbcode(tag, replacements):
     """Recursively convert HTML content of a given tag to BBCode."""
     if tag.name is None:
         return str(tag)
+    elif tag.name == 'br':
+        # Directly return a newline for <br> or </br> tags
+        return '\n'
     elif tag.name in replacements:
         bb_tag = replacements[tag.name]
         inner_content = ''
@@ -89,7 +92,6 @@ def recursive_html_to_bbcode(tag, replacements):
     else:
         # For tags not in the replacements, concatenate the content
         return ''.join(recursive_html_to_bbcode(child, replacements) for child in tag.children)
-
 
 def html_to_bbcode(html):
     replacements = {
