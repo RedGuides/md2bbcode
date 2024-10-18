@@ -17,8 +17,8 @@ from mistune.plugins.abbr import abbr
 from mistune.plugins.spoiler import spoiler
 
 # local
-from .renderers.bbcode import BBCodeRenderer
-from .html2bbcode import process_html
+from md2bbcode.renderers.bbcode import BBCodeRenderer
+from md2bbcode.html2bbcode import process_html
 
 def convert_markdown_to_bbcode(markdown_text, domain):
     # Create a Markdown parser instance using the custom BBCode renderer
