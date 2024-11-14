@@ -1,7 +1,7 @@
 # converts some HTML tags to BBCode
 # pass --debug to save the output to readme.finalpass
 # may be better off replacing this with html to markdown (and then to bbcode). Lepture recommeds a JS html to markdown converter: sundown
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 import argparse
 
 def handle_font_tag(tag, replacements):
@@ -54,44 +54,33 @@ def handle_style_tag(tag, replacements):
                 inner_content = f"[{attr}]{inner_content}[/{attr}]"
     return inner_content
 
-def recursive_html_to_bbcode(tag, replacements):
-    """Recursively convert HTML content of a given tag to BBCode."""
-    if tag.name is None:
-        return str(tag)
-    elif tag.name == 'br':
-        # Directly return a newline for <br> or </br> tags
-        return '\n'
-    elif tag.name in replacements:
-        bb_tag = replacements[tag.name]
-        inner_content = ''
-        for child in tag.children:
-            inner_content += recursive_html_to_bbcode(child, replacements)
+def recursive_html_to_bbcode(element):
+    """Recursively convert HTML elements to BBCode."""
+    bbcode = ''
+
+    if isinstance(element, NavigableString):
+        bbcode += str(element)
+    elif element.name == 'details':
+        # Handle <details> tag
+        summary = element.find('summary')
+        spoiler_title = ''
+        if summary:
+            # Get the summary content and remove the summary element
+            spoiler_title = '=' + ''.join([recursive_html_to_bbcode(child) for child in summary.contents])
+            summary.decompose()
         
-        if tag.name in ['a', 'img']:
-            if tag.name == 'a':
-                href = tag.get('href', '')
-                return f"[URL={href}]{inner_content}[/URL]"
-            elif tag.name == 'img':
-                src = tag.get('src', '')
-                alt = tag.get('alt', '')
-                if alt:
-                    return f"[IMG alt=\"{alt}\"]{src}[/IMG]"
-                else:
-                    return f"[IMG]{src}[/IMG]"
-        elif tag.name in ['ul', 'ol']:
-            return f"[{bb_tag}]{inner_content}[/LIST]"
-        elif tag.name == 'font':
-            # Special handling for <font> tag with attributes
-            return handle_font_tag(tag, replacements)  # Pass replacements here
-        elif tag.name == 'li':
-            return f"[*]{inner_content}"
-        else:
-            return f"[{bb_tag}]{inner_content}[/{bb_tag}]"
-    elif tag.name in ['span', 'div']:
-        return handle_style_tag(tag, replacements)
+        # Process remaining content
+        content = ''.join([recursive_html_to_bbcode(child) for child in element.contents])
+        bbcode += f'[SPOILER{spoiler_title}]{content}[/SPOILER]'
+    elif element.name == 'summary':
+        # Skip summary tag as it's handled in details
+        return ''
     else:
-        # For tags not in the replacements, concatenate the content
-        return ''.join(recursive_html_to_bbcode(child, replacements) for child in tag.children)
+        # Handle other tags or pass through
+        content = ''.join([recursive_html_to_bbcode(child) for child in element.contents])
+        bbcode += content
+
+    return bbcode
 
 def html_to_bbcode(html):
     replacements = {
@@ -116,7 +105,7 @@ def html_to_bbcode(html):
     }
 
     soup = BeautifulSoup(html, 'html.parser')
-    return recursive_html_to_bbcode(soup, replacements)
+    return recursive_html_to_bbcode(soup)
 
 def process_html(input_html, debug=False, output_file=None):
     converted_bbcode = html_to_bbcode(input_html)

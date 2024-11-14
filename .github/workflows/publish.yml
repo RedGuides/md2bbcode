@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # Required for PyPI Trusted Publishing
+  id-token: write
 
 jobs:
   build-and-publish:
