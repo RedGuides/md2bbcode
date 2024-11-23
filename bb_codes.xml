@@ -40,4 +40,18 @@
     <replace_html_email><![CDATA[]]></replace_html_email>
     <replace_text><![CDATA[]]></replace_text>
   </bb_code>
+  <bb_code bb_code_id="pixelate" bb_code_mode="replace" has_option="no" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" editor_icon_type="fa" editor_icon_value="game-console-handheld" title="Pixelate">
+    <desc><![CDATA[The image is scaled with an algorithm such as "nearest neighbor" that preserves contrast and edges in the image. Generally intended for upscaled pixel art or line drawings, no blurring or color smoothing occurs.]]></desc>
+    <example><![CDATA[Using pixelate:
+
+[pixelate][img alt="an image without anti-aliasing"]https://ectunnel.com/community/styles/default/xenforo/logoblue.gif[/img][/pixelate]
+
+Normal:
+
+[img alt="an image with anti-aliasing"]https://ectunnel.com/community/styles/default/xenforo/logoblue.gif[/img]]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<span class="pixelate">{text}</span>]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
 </bb_codes>

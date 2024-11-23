@@ -56,7 +56,11 @@ class BBCodeRenderer(BaseRenderer):
 
     def image(self, text: str, url: str, title=None) -> str:
         alt_text = f' alt="{text}"' if text else ''
-        return f'[img{alt_text}]' + self.safe_url(url) + '[/img]'
+        img_tag = f'[img{alt_text}]' + self.safe_url(url) + '[/img]'
+        # Check if alt text starts with 'pixel' and treat it as pixel art
+        if text and text.lower().startswith('pixel'):
+            return f'[pixelate]{img_tag}[/pixelate]'
+        return img_tag
 
     def codespan(self, text: str) -> str:
         return '[icode]' + text + '[/icode]'
