@@ -17,12 +17,13 @@ from mistune.plugins.abbr import abbr
 from mistune.plugins.spoiler import spoiler
 
 # local
+from md2bbcode.plugins.merge_lists import merge_ordered_lists
 from md2bbcode.renderers.bbcode import BBCodeRenderer
 from md2bbcode.html2bbcode import process_html
 
 def convert_markdown_to_bbcode(markdown_text, domain):
     # Create a Markdown parser instance using the custom BBCode renderer
-    markdown_parser = mistune.create_markdown(renderer=BBCodeRenderer(domain=domain), plugins=[strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler, table_in_list])
+    markdown_parser = mistune.create_markdown(renderer=BBCodeRenderer(domain=domain), plugins=[strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler, table_in_list, merge_ordered_lists])
 
     # Convert Markdown text to BBCode
     return markdown_parser(markdown_text)

@@ -107,12 +107,12 @@ class BBCodeRenderer(BaseRenderer):
             # Check if the language needs special handling
             bbcode_lang = special_cases.get(lang, lang)  # Use the special case if it exists, otherwise use lang as is
             if bbcode_lang:
-                return f"[CODE={bbcode_lang}]{escape_text(code)}[/CODE]\n\n"
+                return f"[CODE={bbcode_lang}]{escape_text(code)}[/CODE]\n"
             else:
-                return f"[CODE]{escape_text(code)}[/CODE]\n\n"
+                return f"[CODE]{escape_text(code)}[/CODE]\n"
         else:
             # No language specified, render with a generic [CODE] tag
-            return f"[CODE]{escape_text(code)}[/CODE]\n\n"
+            return f"[CODE]{escape_text(code)}[/CODE]\n"
 
     def block_quote(self, text: str) -> str:
         return '[QUOTE]\n' + text + '[/QUOTE]\n'
@@ -126,7 +126,9 @@ class BBCodeRenderer(BaseRenderer):
         return '[color=red][icode]' + text + '[/icode][/color]\n'
 
     def list(self, text: str, ordered: bool, **attrs) -> str:
-        tag = 'list' if not ordered else 'list=1'
+        # For ordered lists, always use [list=1] to get automatic sequential numbering
+        # For unordered lists, use [list]
+        tag = 'list=1' if ordered else 'list'
         return '[{}]'.format(tag) + text + '[/list]\n'
 
     def list_item(self, text: str) -> str:

@@ -10,9 +10,12 @@ from mistune.plugins.def_list import def_list
 from mistune.plugins.abbr import abbr
 from mistune.plugins.spoiler import spoiler
 
+#local
+from md2bbcode.plugins.merge_lists import merge_ordered_lists
+
 def convert_markdown_to_ast(input_filepath, output_filepath):
     # Initialize Markdown parser with no renderer to produce an AST
-    markdown_parser = mistune.create_markdown(renderer=None, plugins=[strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler, table_in_list])
+    markdown_parser = mistune.create_markdown(renderer=None, plugins=[strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler, table_in_list, merge_ordered_lists])
     
     # Read the input Markdown file
     with open(input_filepath, 'r', encoding='utf-8') as md_file:
