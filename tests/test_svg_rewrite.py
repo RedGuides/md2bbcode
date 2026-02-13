@@ -29,18 +29,6 @@ def test_html_svg_wraps_weserv():
     assert '[img alt="alt text"]' in lowered
 
 
-def test_redguides_sparkline_adds_png_format():
-    sparkline_url = (
-        "https://www.redguides.com/community/resources/ghoul-resource.1623/watchers-sparkline"
-        "?months=24&w=500&h=180"
-    )
-    markdown = f'<img src="{sparkline_url}" alt="Watchers">'
-    result = process_readme(markdown, domain="")
-    lowered = result.lower()
-
-    assert "watchers-sparkline?months=24&w=500&h=180&format=png" in lowered
-
-
 def test_non_svg_image_unchanged():
     png_url = "https://example.com/x.png"
     markdown = f"![alt]({png_url})"

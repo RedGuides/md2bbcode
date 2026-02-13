@@ -1,6 +1,9 @@
 from mistune.core import BaseRenderer
 from mistune.util import escape as escape_text, striptags, safe_entity
+import re
 from urllib.parse import urljoin, urlparse
+
+from md2bbcode.image_rewrite import rewrite_svg_url
 
 
 class BBCodeRenderer(BaseRenderer):
@@ -56,7 +59,12 @@ class BBCodeRenderer(BaseRenderer):
 
     def image(self, text: str, url: str, title=None) -> str:
         alt_text = f' alt="{text}"' if text else ''
-        img_tag = f'[img{alt_text}]' + self.safe_url(url) + '[/img]'
+        safe_url = self.safe_url(url)
+        rewritten_url = rewrite_svg_url(safe_url)
+        if rewritten_url is None:
+            link_text = text or safe_url
+            return f"[url={safe_url}]{link_text}[/url]"
+        img_tag = f'[img{alt_text}]' + rewritten_url + '[/img]'
         # Check if alt text starts with 'pixel' and treat it as pixel art
         if text and text.lower().startswith('pixel'):
             return f'[pixelate]{img_tag}[/pixelate]'
@@ -115,6 +123,16 @@ class BBCodeRenderer(BaseRenderer):
             return f"[CODE]{escape_text(code)}[/CODE]\n"
 
     def block_quote(self, text: str) -> str:
+        # GFMD "alerts"/admonitions are expressed as a blockquote
+        # Render these into a dedicated XenForo custom BBCode, rather than a normal QUOTE.
+        m = re.match(r"^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*", text, flags=re.IGNORECASE)
+        if m:
+            kind = m.group(1).lower()
+            body = text[m.end():].strip()
+            if body:
+                return f"[admonition={kind}]{body}[/admonition]\n"
+            return f"[admonition={kind}][/admonition]\n"
+
         return '[QUOTE]\n' + text + '[/QUOTE]\n'
 
     def block_html(self, html: str) -> str:
