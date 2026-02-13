@@ -38,7 +38,7 @@ def process_readme(markdown_text, domain=None, debug=False):
             file.write(bbcode_text)
 
     # Convert BBCode formatted as HTML to final BBCode
-    final_bbcode = process_html(bbcode_text, debug, 'readme.finalpass')
+    final_bbcode = process_html(bbcode_text, debug, 'readme.finalpass', domain=domain)
 
     return final_bbcode
 
