@@ -20,7 +20,7 @@ def test_conversion():
         "[b]",
         "[HEADING=2]",
         "[CODE=bash]",
-        "[sup]superscript[/sup]",
+        "[sup]2[/sup]",
     ]
 
     lowered = result.lower()
