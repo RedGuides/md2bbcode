@@ -1,17 +1,15 @@
 [![Publish to PyPI](https://github.com/RedGuides/md2bbcode/actions/workflows/publish.yml/badge.svg)](https://github.com/RedGuides/md2bbcode/actions/workflows/publish.yml)
 
-![md2bbcode logo](https://www.redguides.com/images/md2bbcode-logo.png)
+![md2bbcode logo, original image 'A Specious Origin' by Jerry LoFaro.](https://www.redguides.com/images/md2bbcode-logo.png)
 
 # md2bbcode
-**A wrapper and plugin for [Mistune](https://github.com/lepture/mistune).** It converts GitHub-flavored Markdown to Xenforo-flavored BBCode. Custom BBCodes made for RedGuides are included in `bb_codes.xml`.
+**A wrapper and plugin for [Mistune](https://github.com/lepture/mistune).** It converts most GitHub-flavored Markdown to Xenforo-flavored BBCode. 
 
-## Installation
+> [!TIP]
+> Custom BBCodes made for RedGuides are included in `bb_codes.xml`, import the ones you want in your Xenforo installation at `admin.php?bb-codes`. Some custom BBCodes include css, which you can split off to your extra.css template for more efficiency.
 
-You can install md2bbcode using pip:
-
-```bash
-pip install md2bbcode
-```
+> [!NOTE]  
+> This project is made with LLM assistance.
 
 ## Usage
 
@@ -62,17 +60,12 @@ If you want to contribute to md2bbcode or set up a development environment, foll
    cd md2bbcode
    ```
 
-2. Install Hatch, which is used for building and managing the project:
-   ```bash
-   pip install hatch
-   ```
-
-3. Create a development environment and install dependencies:
+2. Create a development environment and install dependencies:
    ```bash
    hatch env create
    ```
 
-4. Activate the development environment:
+3. Activate the development environment:
    ```bash
    hatch shell
    ```
@@ -87,9 +80,9 @@ The custom plugin for Mistune, which converts AST to bbcode.[^1]
 
 ### html2bbcode
 
-Converts several HTML tags typically allowed in Markdown to BBCode.[^2]
+Converts most HTML tags typically allowed in Github Flavored Markdown to BBCode.[^2]
 
-[^2]: Currently used for post-processing mistune output, but there's a better way. See inside the file for a suggestion.
+[^2]: Currently used for post-processing mistune output. Reference: https://github.github.com/gfm/#raw-html
 
 ```bash
 html2bbcode input_file.html
@@ -105,18 +98,25 @@ md2ast input.md output.json
 
 ## Features Test
 
-Here are a few GitHub-flavored Markdown features so you can use this README.md for testing:
+Here are a few GitHub-flavored Markdown features so you can use this README.md for testing, including the table:
 
-- **Strikethrough:** ~~This text is struck through.~~
-- **Superscript:** This text is normal and this is <sup>superscript</sup>.
-- **Table:**
+  | Feature       | Markdown        | Rendered        |
+  | :------------ | :-------------: | ---------------:|
+  | Bold         | `**text**`      | **bold**        |
+  | Italic       | `*text*`        | *italic*        |
+  | Strikethrough| `~~text~~`      | ~~struck~~      |
+  | Code         | `` `code` ``    | `inline`        |
+  | Link         | `[text](url)`   | [example](https://example.com) |
+  | Superscript  | `<sup>2</sup>`  | E=mc<sup>2</sup> |
+  | Subscript    | `<sub>2</sub>`  | H<sub>2</sub>O  |
 
-  | Syntax      | Description |
-  | ----------- | ----------- |
-  | Header      | Title       |
-  | Paragraph   | Text        |
+<details>
+<summary>HTML spoiler (details/summary)</summary>
 
-## Todo
+<b>html2bbcode</b> test. This is hidden content. Water is H<sub>2</sub>O.
 
-- refactor html2bbcode
-- update for new Xenforo 2.3 and 2.4 BBCode
+<font color="red" size="3" face="Arial">Font tag inside details size 3 Arial red</font>
+
+<span style="color: #27F573; font-size: 12px; font-family: Times New Roman; font-weight: bold; font-style: italic; text-decoration: underline line-through;">Inline style inside details green times new roman strikethrough italic bold underline</span>
+<blockquote data-author="John Doe">This is a quote by John Doe</blockquote>
+</details>
