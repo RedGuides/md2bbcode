@@ -18,7 +18,7 @@ classifiers = [
   "Topic :: Text Processing :: Markup :: Markdown"
 ]
 dependencies = [
-  "mistune>=3.0.2",
+  "mistune>=3.2.0",
   "beautifulsoup4"
 ]
 
@@ -44,6 +44,7 @@ include = [
   "README.md",
   "LICENSE",
   "src/md2bbcode/*.py",
+  "src/md2bbcode/plugins/*.py",
   "src/md2bbcode/renderers/*.py",
   "bb_codes.xml"
 ]
