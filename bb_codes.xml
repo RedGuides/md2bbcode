@@ -1,5 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
 <bb_codes>
+  <bb_code bb_code_id="admonition" bb_code_mode="replace" has_option="yes" option_regex="/^(note|tip|important|warning|caution)$/i" trim_lines_after="1" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" editor_icon_type="fa" editor_icon_value="bell" title="Admonition (GitHub alerts)">
+    <desc><![CDATA[GitHub-style alerts/admonitions: NOTE, TIP, IMPORTANT, WARNING, CAUTION.]]></desc>
+    <example><![CDATA[[admonition=warning]
+Be careful with this step.
+[/admonition]]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<style>
+/* you can cut this style out and place it in your extra.css template so it's not repeated for each admonition. */
+.bbWrapper .rgAdmonition{
+  --rgAdmonition-accent: #0969da; /* note */
+  --rgAdmonition-bg: rgba(9,105,218,.10);
+  margin: 1em 0;
+  padding: .75em 1em;
+  border-left: 4px solid var(--rgAdmonition-accent);
+  background: var(--rgAdmonition-bg);
+  border-radius: 6px;
+}
+
+.bbWrapper .rgAdmonition--tip{
+  --rgAdmonition-accent: #1a7f37;
+  --rgAdmonition-bg: rgba(26,127,55,.12);
+}
+.bbWrapper .rgAdmonition--important{
+  --rgAdmonition-accent: #8250df;
+  --rgAdmonition-bg: rgba(130,80,223,.12);
+}
+.bbWrapper .rgAdmonition--warning{
+  --rgAdmonition-accent: #9a6700;
+  --rgAdmonition-bg: rgba(154,103,0,.12);
+}
+.bbWrapper .rgAdmonition--caution{
+  --rgAdmonition-accent: #d1242f;
+  --rgAdmonition-bg: rgba(209,36,47,.12);
+}
+
+.bbWrapper .rgAdmonition-header{
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  font-weight: 600;
+  margin: 0 0 .5em 0;
+  color: var(--rgAdmonition-accent);
+}
+.bbWrapper .rgAdmonition-label{ text-transform: capitalize; }
+.bbWrapper .rgAdmonition-label:empty::before{ content: "Note"; }
+
+/* Hide the leading and trailing newline. */
+.bbWrapper .rgAdmonition-body > br:first-child{ display: none; }
+.bbWrapper .rgAdmonition-body > br:last-child{ display: none; }
+
+.bbWrapper .rgAdmonition-icon{
+  flex: 0 0 auto;
+  display: none;
+}
+.bbWrapper .rgAdmonition--note .rgAdmonition-icon.fa-info-circle,
+.bbWrapper .rgAdmonition--tip .rgAdmonition-icon.fa-lightbulb,
+.bbWrapper .rgAdmonition--important .rgAdmonition-icon.fa-exclamation-circle,
+.bbWrapper .rgAdmonition--warning .rgAdmonition-icon.fa-exclamation-triangle,
+.bbWrapper .rgAdmonition--caution .rgAdmonition-icon.fa-stop-circle{ display: inline-block; }
+</style>
+<aside class="rgAdmonition rgAdmonition--{option}">
+  <div class="rgAdmonition-header">
+    <i data-xf-init="icon" class="fas fa-info-circle rgAdmonition-icon"></i>
+    <i data-xf-init="icon" class="fas fa-lightbulb rgAdmonition-icon"></i>
+    <i data-xf-init="icon" class="fas fa-exclamation-circle rgAdmonition-icon"></i>
+    <i data-xf-init="icon" class="fas fa-exclamation-triangle rgAdmonition-icon"></i>
+    <i data-xf-init="icon" class="fas fa-stop-circle rgAdmonition-icon"></i>
+    <span class="rgAdmonition-label">{option}</span>
+  </div>
+  <div class="rgAdmonition-body">{text}</div>
+</aside>]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
   <bb_code bb_code_id="abbr" bb_code_mode="replace" has_option="yes" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" editor_icon_type="fa" editor_icon_value="acorn" title="Abbreviation">
     <desc><![CDATA[defines an abbreviation or an acronym]]></desc>
     <example><![CDATA[The [abbr=World Health Organization]WHO[/abbr] was founded in 1948.]]></example>
@@ -51,6 +125,22 @@ Normal:
 [img alt="an image with anti-aliasing"]https://ectunnel.com/community/styles/default/xenforo/logoblue.gif[/img]]]></example>
     <output><![CDATA[]]></output>
     <replace_html><![CDATA[<span class="pixelate">{text}</span>]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
+  <bb_code bb_code_id="sub" bb_code_mode="replace" has_option="no" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" editor_icon_type="fa" editor_icon_value="fa-subscript" title="Subscript">
+    <desc><![CDATA[Subscript text]]></desc>
+    <example><![CDATA[H[sub]2[/sub]O]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<sub>{text}</sub>]]></replace_html>
+    <replace_html_email><![CDATA[]]></replace_html_email>
+    <replace_text><![CDATA[]]></replace_text>
+  </bb_code>
+  <bb_code bb_code_id="sup" bb_code_mode="replace" has_option="no" trim_lines_after="0" plain_children="0" disable_smilies="0" disable_nl2br="0" disable_autolink="0" allow_empty="0" allow_signature="1" editor_icon_type="fa" editor_icon_value="fa-superscript" title="Superscript">
+    <desc><![CDATA[Displays text as superscript]]></desc>
+    <example><![CDATA[e=mc[sup]2[/sup]]]></example>
+    <output><![CDATA[]]></output>
+    <replace_html><![CDATA[<sup>{text}</sup>]]></replace_html>
     <replace_html_email><![CDATA[]]></replace_html_email>
     <replace_text><![CDATA[]]></replace_text>
   </bb_code>
