@@ -2,6 +2,7 @@
 # pass --debug to save the output to readme.finalpass
 import argparse
 import re
+import sys
 from typing import Dict, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse
 
@@ -468,9 +469,31 @@ def process_html(input_html: str, debug: bool = False, output_file: Optional[str
     return converted_bbcode
 
 
+def _write_output(text: str, output_path: Optional[str] = None) -> None:
+    # Always emit UTF-8; Windows stdout otherwise defaults to a legacy code
+    # page and raises UnicodeEncodeError on characters like emoji.
+    if output_path is not None:
+        with open(output_path, "w", encoding="utf-8", newline="") as out_file:
+            out_file.write(text)
+            if not text.endswith("\n"):
+                out_file.write("\n")
+        return
+
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        buffer = getattr(sys.stdout, "buffer", None)
+        if buffer is not None:
+            buffer.write((text + "\n").encode("utf-8"))
+            buffer.flush()
+            return
+    print(text)
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description="Convert HTML to BBCode with optional debugging output.")
     parser.add_argument("input_file", type=str, help="Input HTML file path")
+    parser.add_argument("-o", "--output", help='Output BBCode file path (UTF-8). Recommended on Windows instead of shell redirection. Use "-" or omit for stdout.')
     parser.add_argument("--debug", action="store_true", help="Save output to readme.finalpass for debugging")
 
     args = parser.parse_args(argv)
@@ -482,9 +505,10 @@ def main(argv=None) -> None:
 
     converted_bbcode = process_html(html_content, debug=args.debug, output_file=output_file)
 
-    # Print output unless we're in debug (file) mode.
+    # In debug mode the output is written to readme.finalpass by process_html.
     if not args.debug:
-        print(converted_bbcode)
+        output_path = args.output if args.output and args.output != "-" else None
+        _write_output(converted_bbcode, output_path)
 
 
 if __name__ == "__main__":

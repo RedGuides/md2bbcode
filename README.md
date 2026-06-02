@@ -19,6 +19,12 @@ After installation, you can use md2bbcode from the command line:
 md2bbcode README.md
 ```
 
+Output prints to stdout as UTF-8. To write straight to a file (recommended on Windows, where shell > redirection can mangle the encoding), use `-o`:
+
+```bash
+md2bbcode README.md -o output.bbcode
+```
+
 If the markdown includes relative images or other assets, you can use the --domain flag to prepend a domain to the relative URLs:
 
 ```bash

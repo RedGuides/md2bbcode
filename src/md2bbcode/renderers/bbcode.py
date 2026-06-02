@@ -104,7 +104,8 @@ class BBCodeRenderer(BaseRenderer):
         return text
     
     def block_code(self, code: str, **attrs) -> str:
-        # Renders blocks of code using the language specified in Markdown
+        # Code is emitted verbatim; the html2bbcode pass stashes [CODE] blocks
+        # before HTML parsing, so escaping here would only leak entities.
         special_cases = {
             'plaintext': None  # Default [CODE]
         }
@@ -115,12 +116,12 @@ class BBCodeRenderer(BaseRenderer):
             # Check if the language needs special handling
             bbcode_lang = special_cases.get(lang, lang)  # Use the special case if it exists, otherwise use lang as is
             if bbcode_lang:
-                return f"[CODE={bbcode_lang}]{escape_text(code)}[/CODE]\n"
+                return f"[CODE={bbcode_lang}]{code}[/CODE]\n"
             else:
-                return f"[CODE]{escape_text(code)}[/CODE]\n"
+                return f"[CODE]{code}[/CODE]\n"
         else:
             # No language specified, render with a generic [CODE] tag
-            return f"[CODE]{escape_text(code)}[/CODE]\n"
+            return f"[CODE]{code}[/CODE]\n"
 
     def block_quote(self, text: str) -> str:
         # GFMD "alerts"/admonitions are expressed as a blockquote

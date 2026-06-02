@@ -6,6 +6,27 @@
 import argparse
 import sys
 
+
+def _write_output(text, output_path=None):
+    # Always emit UTF-8; Windows stdout otherwise defaults to a legacy code
+    # page and raises UnicodeEncodeError on characters like emoji.
+    if output_path is not None:
+        with open(output_path, 'w', encoding='utf-8', newline='') as out_file:
+            out_file.write(text)
+            if not text.endswith('\n'):
+                out_file.write('\n')
+        return
+
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except (AttributeError, ValueError):
+        buffer = getattr(sys.stdout, 'buffer', None)
+        if buffer is not None:
+            buffer.write((text + '\n').encode('utf-8'))
+            buffer.flush()
+            return
+    print(text)
+
 # mistune
 import mistune
 from mistune.plugins.formatting import strikethrough, mark, superscript, subscript, insert
@@ -44,7 +65,8 @@ def process_readme(markdown_text, domain=None, debug=False):
 
 def main():
     parser = argparse.ArgumentParser(description='Convert Markdown file to BBCode with HTML processing.')
-    parser.add_argument('input', help='Input Markdown file path')
+    parser.add_argument('input', help='Input Markdown file path (use "-" for stdin)')
+    parser.add_argument('-o', '--output', help='Output BBCode file path (UTF-8). Recommended on Windows instead of shell redirection. Use "-" or omit for stdout.')
     parser.add_argument('--domain', help='Domain to prepend to relative URLs')
     parser.add_argument('--debug', action='store_true', help='Output intermediate results to files for debugging')
     args = parser.parse_args()
@@ -59,9 +81,10 @@ def main():
     # Process the readme and get the final BBCode
     final_bbcode = process_readme(markdown_text, args.domain, args.debug)
 
-    # Optionally, print final BBCode to console
+    # In debug mode the intermediate files are written by process_readme.
     if not args.debug:
-        print(final_bbcode)
+        output_path = args.output if args.output and args.output != '-' else None
+        _write_output(final_bbcode, output_path)
 
 if __name__ == '__main__':
     main()
