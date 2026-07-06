@@ -150,7 +150,8 @@ class HtmlToBbCodeConverter:
 
     def _convert_node(self, node) -> str:
         if isinstance(node, Comment):
-            return f"<!--{node}-->"
+            # BBCode/XenForo has no comment syntax
+            return ""
         if isinstance(node, NavigableString):
             return str(node)
         if isinstance(node, Tag):

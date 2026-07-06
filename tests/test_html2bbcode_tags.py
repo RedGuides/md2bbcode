@@ -1,4 +1,5 @@
 from md2bbcode.main import process_readme
+from md2bbcode.html2bbcode import html_to_bbcode
 
 
 def test_html_basic_formatting_and_links():
@@ -109,3 +110,33 @@ def test_unknown_html_passthrough():
     assert "<custom-tag data-x=\"1\">" in result
     assert "<b>Bold</b>" in result
     assert "[b]" not in result
+
+
+def test_standalone_html_comment_is_dropped():
+    # Mirrors the redfetch README's generated-block markers, which are invisible
+    # in Markdown but would render as literal text in BBCode.
+    markdown = (
+        "Before\n\n"
+        "<!-- BEGIN GENERATED CLI REFERENCE -->\n\n"
+        "Middle\n\n"
+        "<!-- END GENERATED CLI REFERENCE -->\n\n"
+        "After"
+    )
+    result = process_readme(markdown, domain="")
+
+    assert "<!--" not in result
+    assert "GENERATED CLI REFERENCE" not in result
+    assert "Before" in result
+    assert "Middle" in result
+    assert "After" in result
+
+
+def test_comment_nested_in_html_block_is_dropped():
+    # A comment buried inside a larger raw HTML block still reaches the HTML pass
+    # as part of one block; the converter must strip it there too.
+    html = "<div><!-- hidden note --><b>Visible</b></div>"
+    result = html_to_bbcode(html, domain="")
+
+    assert "<!--" not in result
+    assert "hidden note" not in result
+    assert "[B]Visible[/B]" in result

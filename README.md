@@ -9,7 +9,15 @@
 > Custom BBCodes made for RedGuides are included in `bb_codes.xml`, import the ones you want in your Xenforo installation at `admin.php?bb-codes`. Some custom BBCodes include css, which you can split off to your extra.css template for more efficiency.
 
 > [!NOTE]  
-> This project is made with LLM assistance.
+> This project is made with LLM assistance (derogatory).
+
+## Installation
+
+Install as a CLI tool with [pipx](https://pipx.pypa.io):
+
+```bash
+pipx install md2bbcode
+```
 
 ## Usage
 
@@ -34,19 +42,19 @@ md2bbcode README.md --domain https://raw.githubusercontent.com/RedGuides/md2bbco
 You can also use the package in your Python project:
 
 ```python
-from md2bbcode.main import process_readme
+from md2bbcode import process_readme
 
-# Your Markdown content
-markdown_text = "# Hell World"
+bbcode = process_readme("# Hell World")
+print(bbcode)
+```
 
-# Optional domain to prepend to relative URLs
-domain = 'https://raw.githubusercontent.com/yourusername/yourrepo/main/'
+Pass a `domain` to rewrite relative URLs (e.g. images and links in a repo README) to absolute ones:
 
-# Convert Markdown to BBCode
-bbcode_output = process_readme(markdown_text, domain=domain)
-
-# Output the BBCode
-print(bbcode_output)
+```python
+bbcode = process_readme(
+    markdown_text,
+    domain="https://raw.githubusercontent.com/yourusername/yourrepo/main/",
+)
 ```
 
 ### Debug Mode
