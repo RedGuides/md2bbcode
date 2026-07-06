@@ -12,3 +12,4 @@ testme.md
 test2.md
 dist/
 readme.ast
+*.code-workspace

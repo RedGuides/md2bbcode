@@ -81,10 +81,9 @@ def main():
     # Process the readme and get the final BBCode
     final_bbcode = process_readme(markdown_text, args.domain, args.debug)
 
-    # In debug mode the intermediate files are written by process_readme.
-    if not args.debug:
-        output_path = args.output if args.output and args.output != '-' else None
-        _write_output(final_bbcode, output_path)
+    # Always emit the final BBCode to -o/stdout (debug mode also writes readme.1stpass/readme.finalpass).
+    output_path = args.output if args.output and args.output != '-' else None
+    _write_output(final_bbcode, output_path)
 
 if __name__ == '__main__':
     main()

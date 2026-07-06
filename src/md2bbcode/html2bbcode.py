@@ -505,10 +505,9 @@ def main(argv=None) -> None:
 
     converted_bbcode = process_html(html_content, debug=args.debug, output_file=output_file)
 
-    # In debug mode the output is written to readme.finalpass by process_html.
-    if not args.debug:
-        output_path = args.output if args.output and args.output != "-" else None
-        _write_output(converted_bbcode, output_path)
+    # Always emit the final BBCode to -o/stdout (debug mode also writes readme.finalpass).
+    output_path = args.output if args.output and args.output != "-" else None
+    _write_output(converted_bbcode, output_path)
 
 
 if __name__ == "__main__":
