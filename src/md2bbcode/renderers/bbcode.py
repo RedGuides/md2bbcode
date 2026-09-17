@@ -77,7 +77,8 @@ class BBCodeRenderer(BaseRenderer):
         return '\n'
 
     def softbreak(self) -> str:
-        return ''
+        # Keep soft line breaks as spaces; hard breaks still use linebreak().
+        return ' '
 
     def inline_html(self, html: str) -> str:
         if self._escape:
