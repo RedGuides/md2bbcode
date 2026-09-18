@@ -6,7 +6,9 @@
 import argparse
 import functools
 import json
+import os
 import sys
+from urllib.parse import urlparse
 from importlib.metadata import PackageNotFoundError, version as _distribution_version
 
 # mistune
@@ -20,6 +22,7 @@ from mistune.plugins.abbr import abbr
 from mistune.plugins.spoiler import spoiler
 
 # local
+from md2bbcode.dialect import DEFAULT_PRESET, Dialect, DialectError
 from md2bbcode.plugins.merge_lists import merge_ordered_lists
 from md2bbcode.renderers.bbcode import BBCodeRenderer
 from md2bbcode.html2bbcode import process_html
@@ -29,9 +32,10 @@ PLUGINS = [strikethrough, mark, superscript, subscript, insert, table, footnotes
 
 # conversion functions
 
-def convert_markdown_to_bbcode(markdown_text, domain):
+def convert_markdown_to_bbcode(markdown_text, domain=None, link_base=None, image_base=None, dialect=None):
     # Create a Markdown parser instance using the custom BBCode renderer
-    markdown_parser = mistune.create_markdown(renderer=BBCodeRenderer(domain=domain), plugins=PLUGINS)
+    renderer = BBCodeRenderer(domain=domain, link_base=link_base, image_base=image_base, dialect=dialect)
+    markdown_parser = mistune.create_markdown(renderer=renderer, plugins=PLUGINS)
 
     # Convert Markdown text to BBCode
     return markdown_parser(markdown_text)
@@ -43,9 +47,10 @@ def convert_markdown_to_ast(markdown_text):
     return markdown_parser(markdown_text)
 
 
-def process_readme(markdown_text, domain=None, debug=False):
+def process_readme(markdown_text, domain=None, debug=False, link_base=None, image_base=None, dialect=None):
+    """Convert Markdown and any HTML inside it to BBCode."""
     # Convert Markdown to BBCode
-    bbcode_text = convert_markdown_to_bbcode(markdown_text, domain)
+    bbcode_text = convert_markdown_to_bbcode(markdown_text, domain, link_base, image_base, dialect)
 
     # If debug mode, save intermediate BBCode
     if debug:
@@ -53,7 +58,10 @@ def process_readme(markdown_text, domain=None, debug=False):
             file.write(bbcode_text)
 
     # Convert BBCode formatted as HTML to final BBCode
-    final_bbcode = process_html(bbcode_text, debug, 'readme.finalpass', domain=domain)
+    final_bbcode = process_html(
+        bbcode_text, debug, 'readme.finalpass',
+        domain=domain, link_base=link_base, image_base=image_base, dialect=dialect,
+    )
 
     return final_bbcode
 
@@ -140,6 +148,45 @@ def _add_output_argument(parser) -> None:
     parser.add_argument('-o', '--output', help='Save the result to a UTF-8 file. Use "-" or leave this out to print the result. On Windows, use -o instead of > to save to a file.')
 
 
+def _add_url_arguments(parser) -> None:
+    parser.add_argument('--link-base', metavar='URL', help='Base URL for relative links (also images if no other base is set)')
+    parser.add_argument('--image-base', metavar='URL', help='Base URL for relative images (also links if no other base is set)')
+    parser.add_argument('--domain', metavar='URL', help='Base URL for both links and images unless set separately')
+
+
+def _add_dialect_arguments(parser) -> None:
+    parser.add_argument('--preset', metavar='NAME', help=f'Forum preset (default: {DEFAULT_PRESET})')
+    parser.add_argument('--config', metavar='FILE', help='TOML file with custom tags (default: MD2BBCODE_CONFIG environment variable)')
+
+
+def base_urls(args) -> dict:
+    """Check and return the base URLs."""
+    bases = {}
+    for name in ('link_base', 'image_base', 'domain'):
+        value = getattr(args, name) or None
+        if value is not None:
+            try:
+                parsed = urlparse(value)
+            except ValueError:
+                # Invalid URLs, such as a host with an unclosed bracket.
+                parsed = None
+            if parsed is None or parsed.scheme not in ('http', 'https') or not parsed.netloc:
+                option = '--' + name.replace('_', '-')
+                raise CliError(f"{option} must be a full URL like https://example.com/: {value}")
+        bases[name] = value
+    return bases
+
+
+def load_dialect(args) -> Dialect:
+    config = args.config or os.environ.get('MD2BBCODE_CONFIG')
+    try:
+        if config:
+            return Dialect.load(config, preset=args.preset)
+        return Dialect.preset(args.preset or DEFAULT_PRESET)
+    except DialectError as exc:
+        raise CliError(str(exc)) from exc
+
+
 def run(command, argv=None) -> None:
     """Run the command, showing a short error and exiting with code 1 if it raises CliError."""
     try:
@@ -153,16 +200,26 @@ def run(command, argv=None) -> None:
 
 def _md2bbcode(argv=None):
     parser = argparse.ArgumentParser(prog='md2bbcode', description='Convert a Markdown file to BBCode, including any HTML.')
-    parser.add_argument('input', help='Markdown file to convert (use "-" to read piped input)')
+    parser.add_argument('input', nargs='?', help='Markdown file to convert (use "-" to read piped input)')
     _add_output_argument(parser)
-    parser.add_argument('--domain', help='Domain to prepend to relative URLs')
+    _add_url_arguments(parser)
+    _add_dialect_arguments(parser)
+    parser.add_argument('--dump-config', action='store_true', help='Print the current settings as a reusable TOML config, then exit')
     parser.add_argument('--debug', action='store_true', help='Save each conversion step to readme.1stpass and readme.finalpass for debugging')
     _add_version_argument(parser)
     args = parser.parse_args(argv)
 
+    dialect = load_dialect(args)
+    if args.dump_config:
+        write_output(dialect.to_toml(), args.output)
+        return
+    if args.input is None:
+        parser.error('the following arguments are required: input')
+    bases = base_urls(args)
+
     # Read and convert the whole input before writing the result.
     markdown_text = read_input(args.input)
-    final_bbcode = process_readme(markdown_text, args.domain, args.debug)
+    final_bbcode = process_readme(markdown_text, debug=args.debug, dialect=dialect, **bases)
     write_output(final_bbcode, args.output)
 
 
@@ -170,12 +227,16 @@ def _html2bbcode(argv=None):
     parser = argparse.ArgumentParser(prog="html2bbcode", description="Convert an HTML file to BBCode.")
     parser.add_argument("input", help='HTML file to convert (use "-" to read piped input)')
     _add_output_argument(parser)
+    _add_url_arguments(parser)
+    _add_dialect_arguments(parser)
     parser.add_argument("--debug", action="store_true", help="Save output to readme.finalpass for debugging")
     _add_version_argument(parser)
     args = parser.parse_args(argv)
 
+    dialect = load_dialect(args)
+    bases = base_urls(args)
     html_content = read_input(args.input)
-    converted_bbcode = process_html(html_content, debug=args.debug)
+    converted_bbcode = process_html(html_content, debug=args.debug, dialect=dialect, **bases)
     write_output(converted_bbcode, args.output)
 
 

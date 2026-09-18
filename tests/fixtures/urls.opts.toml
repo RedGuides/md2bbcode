@@ -1,1 +1,2 @@
-domain = "https://github.com/o/r/blob/main/"
+link_base = "https://github.com/o/r/blob/main/"
+image_base = "https://raw.githubusercontent.com/o/r/main/"

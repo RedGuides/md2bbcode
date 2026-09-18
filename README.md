@@ -33,11 +33,40 @@ Output prints to stdout as UTF-8. To write straight to a file (recommended on Wi
 md2bbcode README.md -o output.bbcode
 ```
 
-If the markdown includes relative images or other assets, you can use the --domain flag to prepend a domain to the relative URLs:
+For relative links and images, set their base URLs. GitHub needs `blob` URLs for links and raw URLs for images:
 
 ```bash
-md2bbcode README.md --domain https://raw.githubusercontent.com/RedGuides/md2bbcode/main/
+md2bbcode README.md --link-base https://github.com/RedGuides/md2bbcode/blob/main/ --image-base https://raw.githubusercontent.com/RedGuides/md2bbcode/main/
 ```
+
+`--domain URL` sets both bases. If only one base is given, links and images share it. Full URLs, `//host/path` and `#anchor` links stay unchanged.
+
+### Other forums
+
+XenForo is the default. To change a tag, add it to a TOML config:
+
+```toml
+extends = "xenforo"
+
+[tags]
+codespan = "[code]{text}[/code]"
+```
+
+```bash
+md2bbcode README.md --config myboard.toml
+```
+
+`{text}` keeps the content inside a tag. Use `"{text}"` alone to remove the tag.
+
+To export all settings as a config file:
+
+```bash
+md2bbcode --dump-config -o myboard.toml
+```
+
+`--config` falls back to the `MD2BBCODE_CONFIG` environment variable.
+
+For HTML, only inline code, spoilers and paragraph spacing use the config. Other tags still use XenForo BBCode.
 
 You can also use the package in your Python project:
 
@@ -48,13 +77,22 @@ bbcode = process_readme("# Hell World")
 print(bbcode)
 ```
 
-Pass a `domain` to rewrite relative URLs (e.g. images and links in a repo README) to absolute ones:
+Set `link_base` and `image_base` for relative URLs, or `domain` for both:
 
 ```python
 bbcode = process_readme(
     markdown_text,
-    domain="https://raw.githubusercontent.com/yourusername/yourrepo/main/",
+    link_base="https://github.com/yourusername/yourrepo/blob/main/",
+    image_base="https://raw.githubusercontent.com/yourusername/yourrepo/main/",
 )
+```
+
+Pass a custom config as `dialect`:
+
+```python
+from md2bbcode import Dialect, process_readme
+
+bbcode = process_readme(markdown_text, dialect=Dialect.load("myboard.toml"))
 ```
 
 ### Debug Mode

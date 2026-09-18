@@ -1,13 +1,12 @@
-# converts some HTML tags to BBCode
-# pass --debug to save the output to readme.finalpass
-# the html2bbcode command is handled in main.py
+# converts some HTML tags to BBCode; the command is handled in main.py.
 import re
 from typing import Dict, List, Optional, Set, Tuple
-from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
+from md2bbcode.dialect import get_dialect
 from md2bbcode.image_rewrite import rewrite_svg_url
+from md2bbcode.renderers.bbcode import resolve_bases, resolve_url
 
 # XenForo (2.3.x) built-in BBCode option validation (see XF\BbCode\RuleSet::addDefaultTags()).
 _XF_COLOR_OPTION_RE = re.compile(
@@ -47,15 +46,6 @@ def _sanitize_font(value: str) -> Optional[str]:
     return value if value and _XF_FONT_OPTION_RE.match(value) else None
 
 
-def _safe_url(url: str, domain: Optional[str]) -> str:
-    # Simple URL sanitization matching BBCodeRenderer.safe_url.
-    if url.startswith(("javascript:", "vbscript:", "data:")):
-        return "#harmful-link"
-    if domain and not urlparse(url).netloc:
-        return urljoin(domain, url)
-    return url
-
-
 def _add_token(tokens: List[str], original: str) -> str:
     token_id = len(tokens)
     token = f"\x1A{token_id}\x1A"
@@ -63,17 +53,12 @@ def _add_token(tokens: List[str], original: str) -> str:
     return token
 
 
-def _stash_bbcode_plain_items(text: str) -> Tuple[str, List[str]]:
-    """
-    Stash BBCode segments that must be treated as "plain" so we don't accidentally
-    parse/convert HTML inside them (e.g. inline code that contains <font>...).
-
-    Mirrors the spirit of XF's own Markdown stashing of plain tags.
-    """
+def _stash_bbcode_plain_items(text: str, code_tags: Set[str] = frozenset()) -> Tuple[str, List[str]]:
+    """Keep HTML inside plain-text BBCode tags, including custom code tags, unchanged."""
     tokens: List[str] = []
-    # Tags that XF treats as plain or that should not be HTML-parsed in our pipeline.
-    plain_tags = ("code", "icode", "php", "html", "plain", "media", "img", "user", "attach")
-    plain_tags_regex = "|".join(plain_tags)
+    # Leave the contents of these tags alone.
+    plain_tags = {"code", "icode", "php", "html", "plain", "media", "img", "user", "attach"} | set(code_tags)
+    plain_tags_regex = "|".join(sorted(re.escape(tag) for tag in plain_tags))
 
     pattern = re.compile(
         rf"\[(?P<tag>{plain_tags_regex})(?:[^\]]*)\](?P<content>.*?)\[/\1\]",
@@ -95,8 +80,17 @@ def _restore_tokens(text: str, tokens: List[str]) -> str:
 
 
 class HtmlToBbCodeConverter:
-    def __init__(self, domain: Optional[str] = None) -> None:
-        self.domain = domain or ""
+    def __init__(
+        self,
+        domain: Optional[str] = None,
+        link_base: Optional[str] = None,
+        image_base: Optional[str] = None,
+        dialect=None,
+    ) -> None:
+        self.link_base, self.image_base = resolve_bases(link_base, image_base, domain)
+        # Only inline code, spoilers and paragraph spacing use the config here.
+        # Other tags still use XenForo BBCode.
+        self.dialect = get_dialect(dialect)
         self.handlers = {
             "details": self._handle_details,
             "font": self._handle_font,
@@ -138,7 +132,7 @@ class HtmlToBbCodeConverter:
 
     def convert(self, html: str) -> str:
         # Avoid parsing HTML inside BBCode plain-ish tags like [ICODE]...[/ICODE].
-        stashed, tokens = _stash_bbcode_plain_items(html)
+        stashed, tokens = _stash_bbcode_plain_items(html, self.dialect.code_tag_names())
         soup = BeautifulSoup(stashed, "html.parser")
         root = soup.body or soup
         converted = self._convert_children(root)
@@ -246,8 +240,8 @@ class HtmlToBbCodeConverter:
             summary.decompose()
         content = self._convert_children(tag)
         if spoiler_title:
-            return f"[SPOILER={spoiler_title}]{content}[/SPOILER]"
-        return f"[SPOILER]{content}[/SPOILER]"
+            return self.dialect.render("block_spoiler", text=content, title=spoiler_title)
+        return self.dialect.render("block_spoiler_notitle", text=content)
 
     def _handle_font(self, tag: Tag) -> str:
         wrappers: List[Tuple[str, Optional[str]]] = []
@@ -288,7 +282,7 @@ class HtmlToBbCodeConverter:
 
     def _handle_kbd(self, tag: Tag) -> str:
         content = tag.get_text()
-        return f"[ICODE]{content}[/ICODE]"
+        return self.dialect.render("codespan", text=content)
 
     def _handle_link(self, tag: Tag) -> str:
         href = tag.attrs.get("href")
@@ -306,7 +300,7 @@ class HtmlToBbCodeConverter:
                 anchor = href[1:]
                 if anchor:
                     return f"[JUMPTO={anchor}]{text}[/JUMPTO]"
-            return f"[URL={_safe_url(href, self.domain)}]{text}[/URL]"
+            return f"[URL={resolve_url(href, self.link_base)}]{text}[/URL]"
         if name:
             text = self._convert_children(tag)
             return f"[ANAME={name}]{text}[/ANAME]"
@@ -317,7 +311,7 @@ class HtmlToBbCodeConverter:
         if not src:
             return str(tag)
         alt = tag.attrs.get("alt", "")
-        safe_src = _safe_url(src, self.domain)
+        safe_src = resolve_url(src, self.image_base)
         rewritten_url = rewrite_svg_url(safe_src)
         if rewritten_url is None:
             link_text = alt or safe_src
@@ -331,7 +325,7 @@ class HtmlToBbCodeConverter:
         align = self._extract_alignment(tag)
         if align:
             content = self._wrap_alignment(content, align)
-        return f"{content}\n\n"
+        return content + self.dialect.paragraph_separator
 
     def _handle_blockquote(self, tag: Tag) -> str:
         content = self._convert_children(tag)
@@ -373,7 +367,7 @@ class HtmlToBbCodeConverter:
         if tag.parent and isinstance(tag.parent, Tag) and tag.parent.name.lower() == "pre":
             return ""
         content = tag.get_text()
-        return f"[ICODE]{content}[/ICODE]"
+        return self.dialect.render("codespan", text=content)
 
     def _handle_list(self, tag: Tag, ordered: bool) -> str:
         content = self._convert_children(tag)
@@ -453,13 +447,27 @@ class HtmlToBbCodeConverter:
         return f"[ABBR={title}]{content}[/ABBR]"
 
 
-def html_to_bbcode(html: str, domain: Optional[str] = None) -> str:
-    converter = HtmlToBbCodeConverter(domain=domain)
+def html_to_bbcode(
+    html: str,
+    domain: Optional[str] = None,
+    link_base: Optional[str] = None,
+    image_base: Optional[str] = None,
+    dialect=None,
+) -> str:
+    converter = HtmlToBbCodeConverter(domain=domain, link_base=link_base, image_base=image_base, dialect=dialect)
     return converter.convert(html)
 
 
-def process_html(input_html: str, debug: bool = False, output_file: Optional[str] = None, domain: Optional[str] = None) -> str:
-    converted_bbcode = html_to_bbcode(input_html, domain=domain)
+def process_html(
+    input_html: str,
+    debug: bool = False,
+    output_file: Optional[str] = None,
+    domain: Optional[str] = None,
+    link_base: Optional[str] = None,
+    image_base: Optional[str] = None,
+    dialect=None,
+) -> str:
+    converted_bbcode = html_to_bbcode(input_html, domain=domain, link_base=link_base, image_base=image_base, dialect=dialect)
 
     if debug:
         if output_file is None:

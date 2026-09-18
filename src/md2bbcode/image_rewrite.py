@@ -9,7 +9,12 @@ def rewrite_svg_url(url: str) -> Optional[str]:
     if not url:
         return url
 
-    parsed = urlparse(url)
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        # Leave invalid URLs unchanged.
+        return url
+
     if _is_github_actions_badge(parsed):
         return _rewrite_github_actions_badge(parsed)
 

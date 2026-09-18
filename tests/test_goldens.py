@@ -1,15 +1,4 @@
-"""Byte-for-byte golden tests.
-
-Each ``tests/fixtures/<case>.md`` is converted and compared with
-``tests/fixtures/<case>.<preset>.bbcode``. An optional ``<case>.opts.toml``
-supplies keyword arguments for the conversion (for example ``domain``).
-
-Regenerate the expected files after an intentional output change with::
-
-    hatch test -- --update-goldens
-
-and review the resulting diff before committing it.
-"""
+"""Compare converted Markdown with saved BBCode; update with ``hatch test -- --update-goldens``."""
 
 import tomllib
 from pathlib import Path
@@ -43,10 +32,8 @@ def _options(case: str) -> dict:
 
 
 def convert_fixture(case: str, preset: str) -> str:
-    # ``preset`` is recorded in the golden filename now so the fixtures do not
-    # move when dialect selection lands; the converter does not take it yet.
     markdown = _read(FIXTURES / f"{case}.md")
-    return process_readme(markdown, **_options(case))
+    return process_readme(markdown, dialect=preset, **_options(case))
 
 
 @pytest.mark.parametrize("preset", PRESETS)

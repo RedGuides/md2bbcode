@@ -127,3 +127,96 @@ def test_html2bbcode_reads_stdin(monkeypatch, capsys):
     md2bbcode_main.html2bbcode_main(["-"])
     out, _ = capsys.readouterr()
     assert out == "[I]from stdin[/I]\n"
+
+
+# dialects and base URLs
+
+@pytest.fixture
+def board(tmp_path):
+    path = tmp_path / "board.toml"
+    path.write_text('extends = "xenforo"\n[tags]\ncodespan = "[code]{text}[/code]"\n', encoding="utf-8")
+    return str(path)
+
+
+@pytest.fixture
+def readme(tmp_path):
+    path = tmp_path / "in.md"
+    path.write_text("`x` [g](guide.md) ![](logo.png)\n", encoding="utf-8")
+    return str(path)
+
+
+def test_config_changes_the_output_of_both_commands(board, readme, tmp_path, capsys):
+    md2bbcode_main.main([readme, "--config", board])
+    html = tmp_path / "in.html"
+    html.write_text("<code>x</code>", encoding="utf-8")
+    md2bbcode_main.html2bbcode_main([str(html), "--config", board])
+
+    out, _ = capsys.readouterr()
+    assert out == "[code]x[/code] [url=guide.md]g[/url] [img]logo.png[/img]\n\n[code]x[/code]\n"
+
+
+def test_config_is_taken_from_the_environment_when_not_given(board, readme, monkeypatch, capsys):
+    monkeypatch.setenv("MD2BBCODE_CONFIG", board)
+    md2bbcode_main.main([readme])
+    out, _ = capsys.readouterr()
+    assert out.startswith("[code]x[/code]")
+
+
+def test_link_base_image_base_and_domain(readme, capsys):
+    md2bbcode_main.main([readme, "--link-base", "https://l.example/", "--image-base", "https://i.example/"])
+    md2bbcode_main.main([readme, "--domain", "https://d.example/"])
+    md2bbcode_main.main([readme, "--domain", ""])
+
+    out, _ = capsys.readouterr()
+    assert out.split("\n\n")[:3] == [
+        "[icode]x[/icode] [url=https://l.example/guide.md]g[/url] [img]https://i.example/logo.png[/img]",
+        "[icode]x[/icode] [url=https://d.example/guide.md]g[/url] [img]https://d.example/logo.png[/img]",
+        "[icode]x[/icode] [url=guide.md]g[/url] [img]logo.png[/img]",
+    ]
+
+
+def test_dump_config_needs_no_input_and_is_a_working_config(board, readme, tmp_path, capsys):
+    dumped = tmp_path / "dumped.toml"
+    md2bbcode_main.main(["--dump-config", "--config", board, "-o", str(dumped)])
+    assert 'codespan = "[code]{text}[/code]"' in dumped.read_text(encoding="utf-8")
+    assert 'strong = "[b]{text}[/b]"' in dumped.read_text(encoding="utf-8")
+
+    md2bbcode_main.main([readme, "--config", str(dumped)])
+    out, _ = capsys.readouterr()
+    assert out.startswith("[code]x[/code]")
+
+
+def test_dump_config_prints_the_default_preset(capsys):
+    md2bbcode_main.main(["--dump-config"])
+    out, _ = capsys.readouterr()
+    assert 'name = "xenforo"' in out and "[tags]" in out
+
+
+@pytest.mark.parametrize(
+    "extra, expected",
+    [
+        (["--preset", "phpbb9"], "unknown preset: 'phpbb9'"),
+        (["--config", "no-such-board.toml"], "config file not found: no-such-board.toml"),
+        (["--domain", "example.com"], "--domain must be a full URL"),
+        # Bad URLs should show a short error, not a traceback.
+        (["--domain", "https://[::1"], "--domain must be a full URL"),
+        (["--link-base", "http://[oops"], "--link-base must be a full URL"),
+        (["--link-base", "javascript:alert(1)//"], "--link-base must be a full URL"),
+        (["--image-base", "//cdn.example.com/"], "--image-base must be a full URL"),
+    ],
+)
+@pytest.mark.parametrize("entry", [md2bbcode_main.main, md2bbcode_main.html2bbcode_main], ids=["md2bbcode", "html2bbcode"])
+def test_bad_options_are_one_stderr_line_and_exit_1(entry, extra, expected, readme, capsys):
+    _run(lambda: entry([readme, *extra]), 1)
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert err.count("\n") == 1 and expected in err
+
+
+def test_bad_config_names_the_key(readme, tmp_path, capsys):
+    bad = tmp_path / "bad.toml"
+    bad.write_text('[tags]\ncodespan = "[code][/code]"\n', encoding="utf-8")
+    _run(lambda: md2bbcode_main.main([readme, "--config", str(bad)]), 1)
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert err.count("\n") == 1 and "bad.toml" in err and "tags.codespan" in err

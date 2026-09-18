@@ -22,8 +22,8 @@ classifiers = [
   "Topic :: Text Processing :: Markup :: Markdown"
 ]
 dependencies = [
-  "mistune>=3.2.0",
-  "beautifulsoup4"
+  "mistune>=3.3.4",
+  "beautifulsoup4>=4.15.0"
 ]
 
 [project.scripts]
@@ -46,11 +46,16 @@ source = "vcs"
 [[tool.hatch.envs.hatch-test.matrix]]
 python = ["3.12", "3.13", "3.14"]
 
+[tool.pytest.ini_options]
+# Skip vendor tests.
+testpaths = ["tests"]
+
 [tool.hatch.build.targets.sdist]
 include = [
   "README.md",
   "LICENSE.txt",
   "src/md2bbcode/*.py",
+  "src/md2bbcode/dialects/*.toml",
   "src/md2bbcode/plugins/*.py",
   "src/md2bbcode/renderers/*.py",
   "bb_codes.xml"

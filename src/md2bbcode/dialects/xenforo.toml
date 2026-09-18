@@ -1,0 +1,56 @@
+# Default: XenForo 2.x with RedGuides tags from bb_codes.xml.
+name = "xenforo"
+paragraph_separator = "\n\n"
+
+[tags]
+# inline
+strong          = "[b]{text}[/b]"
+emphasis        = "[i]{text}[/i]"
+insert          = "[u]{text}[/u]"
+strikethrough   = "[s]{text}[/s]"
+mark            = "[mark]{text}[/mark]"
+superscript     = "[sup]{text}[/sup]"
+subscript       = "[sub]{text}[/sub]"
+codespan        = "[icode]{text}[/icode]"
+inline_spoiler  = "[ISPOILER]{text}[/ISPOILER]"
+abbr            = "[abbr={title}]{text}[/abbr]"
+link            = "[url={url}]{text}[/url]"
+image           = "[img]{url}[/img]"
+image_alt       = "[img alt=\"{alt}\"]{url}[/img]"
+pixelate        = "[pixelate]{text}[/pixelate]"
+linebreak       = "\n"
+
+# blocks
+heading         = { 1 = "[HEADING=1]{text}[/HEADING]", 2 = "[HEADING=2]{text}[/HEADING]", 3 = "[HEADING=3]{text}[/HEADING]" }
+thematic_break  = "[hr][/hr]"
+block_code      = "[CODE={lang}]{text}[/CODE]"
+block_code_nolang = "[CODE]{text}[/CODE]"
+block_quote     = "[QUOTE]\n{text}[/QUOTE]"
+admonition      = "[admonition={kind}]{text}[/admonition]"
+block_spoiler   = "[SPOILER={title}]{text}[/SPOILER]"
+block_spoiler_notitle = "[SPOILER]{text}[/SPOILER]"
+block_error     = "[color=red][icode]{text}[/icode][/color]"
+
+# lists
+list_ordered    = "[list=1]{text}[/list]"
+list_unordered  = "[list]{text}[/list]"
+list_item       = "[*]{text}"
+task_checked    = "🗹 {text}"
+task_unchecked  = "☐ {text}"
+def_list        = "{text}"
+def_list_head   = "[b]{text}[/b] :"
+def_list_item   = "[INDENT]{text}[/INDENT]"
+
+# tables
+table           = "[TABLE]\n{text}[/TABLE]"
+table_row       = "[TR]\n{text}[/TR]"
+table_head_cell = "[TH]{text}[/TH]"
+table_cell      = "[TD]{text}[/TD]"
+align_left      = "[LEFT]{text}[/LEFT]"
+align_center    = "[CENTER]{text}[/CENTER]"
+align_right     = "[RIGHT]{text}[/RIGHT]"
+
+# footnotes
+footnote_ref    = "[sup][u][JUMPTO=fn-{index}]{index}[/JUMPTO][/u][/sup]"
+footnotes       = "[b]Footnotes:[/b]\n{text}"
+footnote_item   = "[ANAME=fn-{index}]{index}[/ANAME]. {text}"
