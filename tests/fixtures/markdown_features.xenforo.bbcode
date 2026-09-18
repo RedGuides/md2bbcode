@@ -4,10 +4,10 @@
 [HEADING=3]Heading four[/HEADING]
 [HEADING=3]Heading five[/HEADING]
 [HEADING=3]Heading six[/HEADING]
-Plain paragraph with [b]bold[/b], [i]italic[/i], [i][b]both[/b][/i], [s]struck[/s], [mark]marked[/mark], [u]inserted[/u], a soft line break, and a hard break at the end of this line.
-Next line after the hard break. Inline [icode]code[/icode] and a longer [icode]`nested`[/icode] code span.
+Plain paragraph with [B]bold[/B], [I]italic[/I], [I][B]both[/B][/I], [S]struck[/S], [MARK]marked[/MARK], [U]inserted[/U], a soft line break, and a hard break at the end of this line.
+Next line after the hard break. Inline [ICODE]code[/ICODE] and a longer [ICODE]`nested`[/ICODE] code span.
 
-E=mc[sup]2[/sup] and H[sub]2[/sub]O. Entities: © 2024, 5 < 6 & 7 > 3. Literal: 5 < 6 and a lone & ampersand.
+E=mc[SUP]2[/SUP] and H[SUB]2[/SUB]O. Entities: © 2024, 5 < 6 & 7 > 3. Literal: 5 < 6 and a lone & ampersand.
 
 Inline [ISPOILER]spoiler text[/ISPOILER] in a sentence.
 
@@ -15,7 +15,7 @@ Inline [ISPOILER]spoiler text[/ISPOILER] in a sentence.
 Block spoiler line one Block spoiler line two
 
 
-[/SPOILER][hr][/hr]
+[/SPOILER][HR][/HR]
 [QUOTE]
 A blockquote that wraps.
 
@@ -24,11 +24,11 @@ Nested quote.
 
 [/QUOTE]
 [/QUOTE]
-[admonition=note]A note.[/admonition]
-[admonition=tip]A tip with [icode]code[/icode].[/admonition]
-[admonition=important]Important.[/admonition]
-[admonition=warning]Warning.[/admonition]
-[admonition=caution]Caution.[/admonition]
+[ADMONITION=note]A note.[/ADMONITION]
+[ADMONITION=tip]A tip with [ICODE]code[/ICODE].[/ADMONITION]
+[ADMONITION=important]Important.[/ADMONITION]
+[ADMONITION=warning]Warning.[/ADMONITION]
+[ADMONITION=caution]Caution.[/ADMONITION]
 [QUOTE]
 [!FOO] Not an alert.
 
@@ -49,15 +49,15 @@ Code with blank lines inside:
 
 line three
 [/CODE]
-[list][*]Bullet one
-[*]Bullet two[list][*]Nested bullet[list][*]Deeper
-[/list]
+[LIST][*]Bullet one
+[*]Bullet two[LIST][*]Nested bullet[LIST][*]Deeper
+[/LIST]
 
-[/list]
+[/LIST]
 
-[*]Bullet three with [icode]code[/icode]
-[/list]
-[list=1][*]Step one
+[*]Bullet three with [ICODE]code[/ICODE]
+[/LIST]
+[LIST=1][*]Step one
 [*]Step two[CODE=bash]command after the list attaches to step two
 [/CODE]
 
@@ -67,17 +67,17 @@ line three
 [*]Step four
 
 
-[/list]
-[list]☐ Unchecked task
+[/LIST]
+[LIST]☐ Unchecked task
 🗹 Checked task
-[/list]
+[/LIST]
 
-[b]Term one[/b] :
+[B]Term one[/B] :
 [INDENT]Definition one[/INDENT]
-[b]Term two[/b] :
+[B]Term two[/B] :
 [INDENT]Definition two[/INDENT]
 
-The [abbr=Hyper Text Markup Language]HTML[/abbr] spec is maintained by the [abbr=World Wide Web Consortium]W3C[/abbr].
+The [ABBR=Hyper Text Markup Language]HTML[/ABBR] spec is maintained by the [ABBR=World Wide Web Consortium]W3C[/ABBR].
 
 [TABLE]
 [TR]
@@ -93,13 +93,13 @@ The [abbr=Hyper Text Markup Language]HTML[/abbr] spec is maintained by the [abbr
 [TD]d[/TD]
 [/TR]
 [TR]
-[TD][LEFT][icode]x[/icode][/LEFT][/TD]
-[TD][CENTER][b]y[/b][/CENTER][/TD]
-[TD][RIGHT][i]z[/i][/RIGHT][/TD]
-[TD][url=https://example.com]l[/url][/TD]
+[TD][LEFT][ICODE]x[/ICODE][/LEFT][/TD]
+[TD][CENTER][B]y[/B][/CENTER][/TD]
+[TD][RIGHT][I]z[/I][/RIGHT][/TD]
+[TD][URL=https://example.com]l[/URL][/TD]
 [/TR]
 [/TABLE]
-[list][*]Item with a table inside
+[LIST][*]Item with a table inside
 
 [TABLE]
 [TR]
@@ -112,17 +112,17 @@ The [abbr=Hyper Text Markup Language]HTML[/abbr] spec is maintained by the [abbr
 [/TR]
 [/TABLE]
 
-[/list]
-Footnote reference one[sup][u][JUMPTO=fn-1]1[/JUMPTO][/u][/sup] and two[sup][u][JUMPTO=fn-2]2[/JUMPTO][/u][/sup].
+[/LIST]
+Footnote reference one[SUP][U][JUMPTO=fn-1]1[/JUMPTO][/U][/SUP] and two[SUP][U][JUMPTO=fn-2]2[/JUMPTO][/U][/SUP].
 
-Links: [url=https://example.com/path?q=1&r=2]absolute[/url], [url=docs/guide.md]relative[/url], [url=#heading-two]anchor[/url], [url=mailto:someone@example.com]mailto[/url], [url=//example.com/x]protocol relative[/url], [url=#harmful-link]harmful[/url], [url=https://autolink.example.com]https://autolink.example.com[/url], and bare https://bare.example.com.
+Links: [URL=https://example.com/path?q=1&r=2]absolute[/URL], [URL=docs/guide.md]relative[/URL], [URL=#heading-two]anchor[/URL], [URL=mailto:someone@example.com]mailto[/URL], [URL=//example.com/x]protocol relative[/URL], [URL=#harmful-link]harmful[/URL], [URL=https://autolink.example.com]https://autolink.example.com[/URL], and bare https://bare.example.com.
 
-Images: [img alt="png"]https://example.com/image.png[/img], [img alt="svg"]https://images.weserv.nl/?url=https%3A%2F%2Fexample.com%2Flogo.svg&output=png[/img], [pixelate][img alt="pixel art alt"]https://example.com/sprite.png[/img][/pixelate], [img]https://example.com/noalt.png[/img], [img alt="relative"]images/local.png[/img], [url=https://github.com/o/r/actions][img alt="badge"]https://raster.shields.io/github/actions/workflow/status/o/r/ci.yml.png?branch=main[/img][/url], [img alt="data svg"]#harmful-link[/img].
+Images: [IMG alt="png"]https://example.com/image.png[/IMG], [IMG alt="svg"]https://images.weserv.nl/?url=https%3A%2F%2Fexample.com%2Flogo.svg&output=png[/IMG], [PIXELATE][IMG alt="pixel art alt"]https://example.com/sprite.png[/IMG][/PIXELATE], [IMG]https://example.com/noalt.png[/IMG], [IMG alt="relative"]images/local.png[/IMG], [URL=https://github.com/o/r/actions][IMG alt="badge"]https://raster.shields.io/github/actions/workflow/status/o/r/ci.yml.png?branch=main[/IMG][/URL], [IMG alt="data svg"]#harmful-link[/IMG].
 
 Final paragraph.
 
-[b]Footnotes:[/b]
+[B]Footnotes:[/B]
 [ANAME=fn-1]1[/ANAME]. First footnote.
 
-[ANAME=fn-2]2[/ANAME]. Second footnote with [b]bold[/b].
+[ANAME=fn-2]2[/ANAME]. Second footnote with [B]bold[/B].
 

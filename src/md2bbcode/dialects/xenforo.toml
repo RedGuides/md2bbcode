@@ -1,44 +1,51 @@
 # Default: XenForo 2.x with RedGuides tags from bb_codes.xml.
+#
+# Tag names are UPPERCASE, option names lowercase. XenForo lowercases both
+# before it looks anything up (XF\BbCode\Parser::openTag), so case is ours to
+# choose; uppercase is what XenForo's own HTML-to-BBCode converter writes
+# (XF\Html\Renderer\BbCode), which is also what the rich editor rewrites a post
+# to the first time someone saves it. Writing it that way means a generated post
+# and an edited one differ only where the author edited.
 name = "xenforo"
 paragraph_separator = "\n\n"
 
 [tags]
 # inline
-strong          = "[b]{text}[/b]"
-emphasis        = "[i]{text}[/i]"
-insert          = "[u]{text}[/u]"
-strikethrough   = "[s]{text}[/s]"
-mark            = "[mark]{text}[/mark]"
-superscript     = "[sup]{text}[/sup]"
-subscript       = "[sub]{text}[/sub]"
-codespan        = "[icode]{text}[/icode]"
+strong          = "[B]{text}[/B]"
+emphasis        = "[I]{text}[/I]"
+insert          = "[U]{text}[/U]"
+strikethrough   = "[S]{text}[/S]"
+mark            = "[MARK]{text}[/MARK]"
+superscript     = "[SUP]{text}[/SUP]"
+subscript       = "[SUB]{text}[/SUB]"
+codespan        = "[ICODE]{text}[/ICODE]"
 inline_spoiler  = "[ISPOILER]{text}[/ISPOILER]"
-abbr            = "[abbr={title}]{text}[/abbr]"
-link            = "[url={url}]{text}[/url]"
-image           = "[img]{url}[/img]"
-image_alt       = "[img alt=\"{alt}\"]{url}[/img]"
-pixelate        = "[pixelate]{text}[/pixelate]"
+abbr            = "[ABBR={title}]{text}[/ABBR]"
+link            = "[URL={url}]{text}[/URL]"
+image           = "[IMG]{url}[/IMG]"
+image_alt       = "[IMG alt=\"{alt}\"]{url}[/IMG]"
+pixelate        = "[PIXELATE]{text}[/PIXELATE]"
 linebreak       = "\n"
 
 # blocks
 heading         = { 1 = "[HEADING=1]{text}[/HEADING]", 2 = "[HEADING=2]{text}[/HEADING]", 3 = "[HEADING=3]{text}[/HEADING]" }
-thematic_break  = "[hr][/hr]"
+thematic_break  = "[HR][/HR]"
 block_code      = "[CODE={lang}]{text}[/CODE]"
 block_code_nolang = "[CODE]{text}[/CODE]"
 block_quote     = "[QUOTE]\n{text}[/QUOTE]"
-admonition      = "[admonition={kind}]{text}[/admonition]"
+admonition      = "[ADMONITION={kind}]{text}[/ADMONITION]"
 block_spoiler   = "[SPOILER={title}]{text}[/SPOILER]"
 block_spoiler_notitle = "[SPOILER]{text}[/SPOILER]"
-block_error     = "[color=red][icode]{text}[/icode][/color]"
+block_error     = "[COLOR=red][ICODE]{text}[/ICODE][/COLOR]"
 
 # lists
-list_ordered    = "[list=1]{text}[/list]"
-list_unordered  = "[list]{text}[/list]"
+list_ordered    = "[LIST=1]{text}[/LIST]"
+list_unordered  = "[LIST]{text}[/LIST]"
 list_item       = "[*]{text}"
 task_checked    = "🗹 {text}"
 task_unchecked  = "☐ {text}"
 def_list        = "{text}"
-def_list_head   = "[b]{text}[/b] :"
+def_list_head   = "[B]{text}[/B] :"
 def_list_item   = "[INDENT]{text}[/INDENT]"
 
 # tables
@@ -51,6 +58,6 @@ align_center    = "[CENTER]{text}[/CENTER]"
 align_right     = "[RIGHT]{text}[/RIGHT]"
 
 # footnotes
-footnote_ref    = "[sup][u][JUMPTO=fn-{index}]{index}[/JUMPTO][/u][/sup]"
-footnotes       = "[b]Footnotes:[/b]\n{text}"
+footnote_ref    = "[SUP][U][JUMPTO=fn-{index}]{index}[/JUMPTO][/U][/SUP]"
+footnotes       = "[B]Footnotes:[/B]\n{text}"
 footnote_item   = "[ANAME=fn-{index}]{index}[/ANAME]. {text}"

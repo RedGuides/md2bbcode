@@ -1,11 +1,14 @@
 """Test forum presets, custom tags, and config errors."""
 
+import re
 import tomllib
 
 import pytest
 
 from md2bbcode import Dialect, process_readme
 from md2bbcode.dialect import TAGS, DialectError
+
+_TAG_NAME_RE = re.compile(r"\[/?([A-Za-z][A-Za-z0-9_-]*)")
 
 
 def _dialect(toml_text: str, **kwargs) -> Dialect:
@@ -19,6 +22,22 @@ def test_xenforo_is_the_default_and_defines_every_tag():
     assert "xenforo" in Dialect.presets()
 
 
+@pytest.mark.parametrize("preset", Dialect.presets())
+def test_a_preset_writes_every_tag_name_in_one_case(preset):
+    # Boards read BBCode case-insensitively, so a preset may pick either case,
+    # but mixing them within one preset makes the output look accidental. The
+    # xenforo preset uses upper case, matching XenForo's own HTML-to-BBCode
+    # renderer and what its editor rewrites a post to on the first save.
+    board = Dialect.preset(preset)
+    templates = list(board.tags.values()) + list(board.headings.values())
+    names = [name for template in templates for name in _TAG_NAME_RE.findall(template)]
+    assert names, f"{preset}: no tags found, the regex is wrong"
+
+    mixed = sorted({name for name in names if not name.isupper()} if names[0].isupper()
+                   else {name for name in names if not name.islower()})
+    assert not mixed, f"{preset}: tag names are mixed case: {', '.join(mixed)}"
+
+
 def test_issue_2_override_changes_markdown_and_html_code_spans():
     board = _dialect('extends = "xenforo"\n[tags]\ncodespan = "[code]{text}[/code]"\n')
     result = process_readme("Run `pip` then <code>hatch</code> or <kbd>Ctrl</kbd>.", dialect=board)
@@ -27,7 +46,7 @@ def test_issue_2_override_changes_markdown_and_html_code_spans():
 
 def test_extends_defaults_to_xenforo_and_keeps_every_other_tag():
     board = _dialect('[tags]\nstrong = "[bold]{text}[/bold]"\n')
-    assert process_readme("**a** *b*", dialect=board) == "[bold]a[/bold] [i]b[/i]\n\n"
+    assert process_readme("**a** *b*", dialect=board) == "[bold]a[/bold] [I]b[/I]\n\n"
 
 
 def test_text_alone_drops_the_tag_and_keeps_the_content():
@@ -63,7 +82,7 @@ def test_a_wrapped_code_template_protects_the_inner_tag_not_the_wrapper():
     board = _dialect('[tags]\ncodespan = "[b][icode]{text}[/icode][/b]"\n')
     assert board.code_tag_names() == {"code", "icode"}
     assert process_readme("**bold with <i>italic</i> inside**", dialect=board) == (
-        "[b]bold with [I]italic[/I] inside[/b]\n\n"
+        "[B]bold with [I]italic[/I] inside[/B]\n\n"
     )
 
 

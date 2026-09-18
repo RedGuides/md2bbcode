@@ -94,7 +94,7 @@ def test_stdout_output_is_utf8_and_matches_output_file(tmp_path, capsys):
 
     out, err = capsys.readouterr()
     assert err == ""
-    assert out == "Emoji ☐ 🗹 and [i]em[/i]\n\n"
+    assert out == "Emoji ☐ 🗹 and [I]em[/I]\n\n"
     assert out_path.read_bytes().decode("utf-8") == out
 
 
@@ -152,7 +152,7 @@ def test_config_changes_the_output_of_both_commands(board, readme, tmp_path, cap
     md2bbcode_main.html2bbcode_main([str(html), "--config", board])
 
     out, _ = capsys.readouterr()
-    assert out == "[code]x[/code] [url=guide.md]g[/url] [img]logo.png[/img]\n\n[code]x[/code]\n"
+    assert out == "[code]x[/code] [URL=guide.md]g[/URL] [IMG]logo.png[/IMG]\n\n[code]x[/code]\n"
 
 
 def test_config_is_taken_from_the_environment_when_not_given(board, readme, monkeypatch, capsys):
@@ -169,9 +169,9 @@ def test_link_base_image_base_and_domain(readme, capsys):
 
     out, _ = capsys.readouterr()
     assert out.split("\n\n")[:3] == [
-        "[icode]x[/icode] [url=https://l.example/guide.md]g[/url] [img]https://i.example/logo.png[/img]",
-        "[icode]x[/icode] [url=https://d.example/guide.md]g[/url] [img]https://d.example/logo.png[/img]",
-        "[icode]x[/icode] [url=guide.md]g[/url] [img]logo.png[/img]",
+        "[ICODE]x[/ICODE] [URL=https://l.example/guide.md]g[/URL] [IMG]https://i.example/logo.png[/IMG]",
+        "[ICODE]x[/ICODE] [URL=https://d.example/guide.md]g[/URL] [IMG]https://d.example/logo.png[/IMG]",
+        "[ICODE]x[/ICODE] [URL=guide.md]g[/URL] [IMG]logo.png[/IMG]",
     ]
 
 
@@ -179,7 +179,7 @@ def test_dump_config_needs_no_input_and_is_a_working_config(board, readme, tmp_p
     dumped = tmp_path / "dumped.toml"
     md2bbcode_main.main(["--dump-config", "--config", board, "-o", str(dumped)])
     assert 'codespan = "[code]{text}[/code]"' in dumped.read_text(encoding="utf-8")
-    assert 'strong = "[b]{text}[/b]"' in dumped.read_text(encoding="utf-8")
+    assert 'strong = "[B]{text}[/B]"' in dumped.read_text(encoding="utf-8")
 
     md2bbcode_main.main([readme, "--config", str(dumped)])
     out, _ = capsys.readouterr()
