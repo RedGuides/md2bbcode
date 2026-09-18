@@ -1,0 +1,141 @@
+[url=https://github.com/RedGuides/md2bbcode/actions/workflows/publish.yml][img alt="Publish to PyPI"]https://raster.shields.io/github/actions/workflow/status/RedGuides/md2bbcode/publish.yml.png[/img][/url]
+
+[img alt="md2bbcode logo, original image 'A Specious Origin' by Jerry LoFaro."]https://www.redguides.com/images/md2bbcode-logo.png[/img]
+
+[HEADING=1]md2bbcode[/HEADING]
+[b]A wrapper and plugin for [url=https://github.com/lepture/mistune]Mistune[/url].[/b] It converts most GitHub-flavored Markdown to Xenforo-flavored BBCode.
+
+[admonition=tip]Custom BBCodes made for RedGuides are included in [icode]bb_codes.xml[/icode], import the ones you want in your Xenforo installation at [icode]admin.php?bb-codes[/icode]. Some custom BBCodes include css, which you can split off to your extra.css template for more efficiency.[/admonition]
+[admonition=note]This project is made with LLM assistance (derogatory).[/admonition]
+[HEADING=2]Installation[/HEADING]
+Install as a CLI tool with [url=https://pipx.pypa.io]pipx[/url]:
+
+[CODE=bash]pipx install md2bbcode
+[/CODE]
+[HEADING=2]Usage[/HEADING]
+After installation, you can use md2bbcode from the command line:
+
+[CODE=bash]md2bbcode README.md
+[/CODE]
+Output prints to stdout as UTF-8. To write straight to a file (recommended on Windows, where shell > redirection can mangle the encoding), use [icode]-o[/icode]:
+
+[CODE=bash]md2bbcode README.md -o output.bbcode
+[/CODE]
+If the markdown includes relative images or other assets, you can use the --domain flag to prepend a domain to the relative URLs:
+
+[CODE=bash]md2bbcode README.md --domain https://raw.githubusercontent.com/RedGuides/md2bbcode/main/
+[/CODE]
+You can also use the package in your Python project:
+
+[CODE=python]from md2bbcode import process_readme
+
+bbcode = process_readme("# Hell World")
+print(bbcode)
+[/CODE]
+Pass a [icode]domain[/icode] to rewrite relative URLs (e.g. images and links in a repo README) to absolute ones:
+
+[CODE=python]bbcode = process_readme(
+    markdown_text,
+    domain="https://raw.githubusercontent.com/yourusername/yourrepo/main/",
+)
+[/CODE]
+[HEADING=3]Debug Mode[/HEADING]
+You can use the [icode]--debug[/icode] flag to save intermediate results to files for debugging:
+
+[CODE=bash]md2bbcode README.md --debug
+[/CODE]
+[HEADING=2]Development[/HEADING]
+If you want to contribute to md2bbcode or set up a development environment, follow these steps:
+
+[list=1][*]Clone the repository:
+
+[CODE=bash]git clone https://github.com/RedGuides/md2bbcode.git
+cd md2bbcode
+[/CODE]
+
+[*]Create a development environment and install dependencies:
+
+[CODE=bash]hatch env create
+[/CODE]
+
+[*]Activate the development environment:
+
+[CODE=bash]hatch shell
+[/CODE]
+
+[/list]
+[HEADING=3]renderers/bbcode.py[/HEADING]
+The custom plugin for Mistune, which converts AST to bbcode.[sup][u][JUMPTO=fn-1]1[/JUMPTO][/u][/sup]
+
+[HEADING=2]Additional Tools[/HEADING]
+[HEADING=3]html2bbcode[/HEADING]
+Converts most HTML tags typically allowed in Github Flavored Markdown to BBCode.[sup][u][JUMPTO=fn-2]2[/JUMPTO][/u][/sup]
+
+[CODE=bash]html2bbcode input_file.html
+[/CODE]
+[HEADING=3]md2ast[/HEADING]
+For debugging Mistune's renderer, converts a Markdown file to AST (JSON format).
+
+[CODE=bash]md2ast input.md output.json
+[/CODE]
+[HEADING=2]Features Test[/HEADING]
+Here are a few GitHub-flavored Markdown features so you can use this README.md for testing, including the table:
+
+[TABLE]
+[TR]
+[TH][LEFT]Feature[/LEFT][/TH]
+[TH][CENTER]Markdown[/CENTER][/TH]
+[TH][RIGHT]Rendered[/RIGHT][/TH]
+[/TR]
+[TR]
+[TD][LEFT]Bold[/LEFT][/TD]
+[TD][CENTER][icode]**text**[/icode][/CENTER][/TD]
+[TD][RIGHT][b]bold[/b][/RIGHT][/TD]
+[/TR]
+[TR]
+[TD][LEFT]Italic[/LEFT][/TD]
+[TD][CENTER][icode]*text*[/icode][/CENTER][/TD]
+[TD][RIGHT][i]italic[/i][/RIGHT][/TD]
+[/TR]
+[TR]
+[TD][LEFT]Strikethrough[/LEFT][/TD]
+[TD][CENTER][icode]~~text~~[/icode][/CENTER][/TD]
+[TD][RIGHT][s]struck[/s][/RIGHT][/TD]
+[/TR]
+[TR]
+[TD][LEFT]Code[/LEFT][/TD]
+[TD][CENTER][icode]`code`[/icode][/CENTER][/TD]
+[TD][RIGHT][icode]inline[/icode][/RIGHT][/TD]
+[/TR]
+[TR]
+[TD][LEFT]Link[/LEFT][/TD]
+[TD][CENTER][icode][text](url)[/icode][/CENTER][/TD]
+[TD][RIGHT][url=https://example.com]example[/url][/RIGHT][/TD]
+[/TR]
+[TR]
+[TD][LEFT]Superscript[/LEFT][/TD]
+[TD][CENTER][icode]<sup>2</sup>[/icode][/CENTER][/TD]
+[TD][RIGHT]E=mc[SUP]2[/SUP][/RIGHT][/TD]
+[/TR]
+[TR]
+[TD][LEFT]Subscript[/LEFT][/TD]
+[TD][CENTER][icode]<sub>2</sub>[/icode][/CENTER][/TD]
+[TD][RIGHT]H[SUB]2[/SUB]O[/RIGHT][/TD]
+[/TR]
+[/TABLE]
+[SPOILER=HTML spoiler (details/summary)]
+
+[B]html2bbcode[/B] test. This is hidden content. Water is H[SUB]2[/SUB]O.
+
+[COLOR=red][SIZE=3][FONT=Arial]Font tag inside details size 3 Arial red[/FONT][/SIZE][/COLOR]
+[COLOR=#27F573][SIZE=12px][FONT=Times New Roman][S][U][B][I]Inline style inside details green times new roman strikethrough italic bold underline[/I][/B][/U][/S][/FONT][/SIZE][/COLOR]
+[QUOTE="John Doe"]
+This is a quote by John Doe[/QUOTE]
+
+[/SPOILER]
+
+[b]Footnotes:[/b]
+[ANAME=fn-1]1[/ANAME]. Mistune does not convert Markdown HTML to AST, hence the need for [icode]html2bbcode[/icode].
+
+[ANAME=fn-2]2[/ANAME]. Currently used for post-processing mistune output. Reference: https://github.github.com/gfm/#raw-html
+

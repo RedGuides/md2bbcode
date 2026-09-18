@@ -13,3 +13,6 @@ test2.md
 dist/
 readme.ast
 *.code-workspace
+# local copies and files for testing
+vendor/
+redfetchreadme.md

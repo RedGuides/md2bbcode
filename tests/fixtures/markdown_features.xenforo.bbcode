@@ -1,0 +1,128 @@
+[HEADING=1]Heading one[/HEADING]
+[HEADING=2]Heading two[/HEADING]
+[HEADING=3]Heading three[/HEADING]
+[HEADING=3]Heading four[/HEADING]
+[HEADING=3]Heading five[/HEADING]
+[HEADING=3]Heading six[/HEADING]
+Plain paragraph with [b]bold[/b], [i]italic[/i], [i][b]both[/b][/i], [s]struck[/s], [mark]marked[/mark], [u]inserted[/u], a soft line break, and a hard break at the end of this line.
+Next line after the hard break. Inline [icode]code[/icode] and a longer [icode]`nested`[/icode] code span.
+
+E=mc[sup]2[/sup] and H[sub]2[/sub]O. Entities: © 2024, 5 < 6 & 7 > 3. Literal: 5 < 6 and a lone & ampersand.
+
+Inline [ISPOILER]spoiler text[/ISPOILER] in a sentence.
+
+[SPOILER]
+Block spoiler line one Block spoiler line two
+
+
+[/SPOILER][hr][/hr]
+[QUOTE]
+A blockquote that wraps.
+
+[QUOTE]
+Nested quote.
+
+[/QUOTE]
+[/QUOTE]
+[admonition=note]A note.[/admonition]
+[admonition=tip]A tip with [icode]code[/icode].[/admonition]
+[admonition=important]Important.[/admonition]
+[admonition=warning]Warning.[/admonition]
+[admonition=caution]Caution.[/admonition]
+[QUOTE]
+[!FOO] Not an alert.
+
+[/QUOTE]
+[CODE=bash]echo "fenced with a language"
+[/CODE]
+[CODE]no language
+[/CODE]
+[CODE]plaintext language maps to bare CODE
+[/CODE]
+[CODE=python]print("info string with extra words")
+[/CODE]
+[CODE]indented code block
+second line[/CODE]
+Code with blank lines inside:
+
+[CODE]line one
+
+line three
+[/CODE]
+[list][*]Bullet one
+[*]Bullet two[list][*]Nested bullet[list][*]Deeper
+[/list]
+
+[/list]
+
+[*]Bullet three with [icode]code[/icode]
+[/list]
+[list=1][*]Step one
+[*]Step two[CODE=bash]command after the list attaches to step two
+[/CODE]
+
+[*]Step three continues the merged list
+
+
+[*]Step four
+
+
+[/list]
+[list]☐ Unchecked task
+🗹 Checked task
+[/list]
+
+[b]Term one[/b] :
+[INDENT]Definition one[/INDENT]
+[b]Term two[/b] :
+[INDENT]Definition two[/INDENT]
+
+The [abbr=Hyper Text Markup Language]HTML[/abbr] spec is maintained by the [abbr=World Wide Web Consortium]W3C[/abbr].
+
+[TABLE]
+[TR]
+[TH][LEFT]Left[/LEFT][/TH]
+[TH][CENTER]Center[/CENTER][/TH]
+[TH][RIGHT]Right[/RIGHT][/TH]
+[TH]Default[/TH]
+[/TR]
+[TR]
+[TD][LEFT]a[/LEFT][/TD]
+[TD][CENTER]b[/CENTER][/TD]
+[TD][RIGHT]c[/RIGHT][/TD]
+[TD]d[/TD]
+[/TR]
+[TR]
+[TD][LEFT][icode]x[/icode][/LEFT][/TD]
+[TD][CENTER][b]y[/b][/CENTER][/TD]
+[TD][RIGHT][i]z[/i][/RIGHT][/TD]
+[TD][url=https://example.com]l[/url][/TD]
+[/TR]
+[/TABLE]
+[list][*]Item with a table inside
+
+[TABLE]
+[TR]
+[TH]A[/TH]
+[TH]B[/TH]
+[/TR]
+[TR]
+[TD]1[/TD]
+[TD]2[/TD]
+[/TR]
+[/TABLE]
+
+[/list]
+Footnote reference one[sup][u][JUMPTO=fn-1]1[/JUMPTO][/u][/sup] and two[sup][u][JUMPTO=fn-2]2[/JUMPTO][/u][/sup].
+
+Links: [url=https://example.com/path?q=1&r=2]absolute[/url], [url=docs/guide.md]relative[/url], [url=#heading-two]anchor[/url], [url=mailto:someone@example.com]mailto[/url], [url=//example.com/x]protocol relative[/url], [url=#harmful-link]harmful[/url]), [url=https://autolink.example.com]https://autolink.example.com[/url], and bare https://bare.example.com.
+
+Images: [img alt="png"]https://example.com/image.png[/img], [img alt="svg"]https://images.weserv.nl/?url=https%3A%2F%2Fexample.com%2Flogo.svg&output=png[/img], [pixelate][img alt="pixel art alt"]https://example.com/sprite.png[/img][/pixelate], [img]https://example.com/noalt.png[/img], [img alt="relative"]images/local.png[/img], [url=https://github.com/o/r/actions][img alt="badge"]https://raster.shields.io/github/actions/workflow/status/o/r/ci.yml.png?branch=main[/img][/url], [img alt="data svg"]#harmful-link[/img].
+
+Final paragraph.
+
+[b]Footnotes:[/b]
+[ANAME=fn-1]1[/ANAME]. First footnote.
+
+[ANAME=fn-2]2[/ANAME]. Second footnote with [b]bold[/b].
+

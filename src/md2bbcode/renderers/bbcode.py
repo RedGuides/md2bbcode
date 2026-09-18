@@ -1,5 +1,5 @@
 from mistune.core import BaseRenderer
-from mistune.util import escape as escape_text, striptags, safe_entity
+from mistune.util import safe_entity
 import re
 from urllib.parse import urljoin, urlparse
 
@@ -8,12 +8,10 @@ from md2bbcode.image_rewrite import rewrite_svg_url
 
 class BBCodeRenderer(BaseRenderer):
     """A renderer for converting Markdown to BBCode."""
-    _escape: bool
     NAME = 'bbcode'
 
-    def __init__(self, escape=False, domain=None):
+    def __init__(self, domain=None):
         super(BBCodeRenderer, self).__init__()
-        self._escape = escape
         self.domain = domain
 
     def render_token(self, token, state):
@@ -44,8 +42,6 @@ class BBCodeRenderer(BaseRenderer):
         return url
 
     def text(self, text: str) -> str:
-        if self._escape:
-            return escape_text(text)
         return text
 
     def emphasis(self, text: str) -> str:
@@ -81,8 +77,7 @@ class BBCodeRenderer(BaseRenderer):
         return ' '
 
     def inline_html(self, html: str) -> str:
-        if self._escape:
-            return escape_text(html)
+        # Leave HTML as it is for now. html2bbcode converts it later.
         return html
 
     def paragraph(self, text: str) -> str:
@@ -138,8 +133,6 @@ class BBCodeRenderer(BaseRenderer):
         return '[QUOTE]\n' + text + '[/QUOTE]\n'
 
     def block_html(self, html: str) -> str:
-        if self._escape:
-            return '<p>' + escape_text(html.strip()) + '</p>\n'
         return html + '\n'
 
     def block_error(self, text: str) -> str:

@@ -1,0 +1,215 @@
+[img alt="six wizards levitating a package, the word redfetch underneath"]https://www.redguides.com/images/redfetchlogo.png[/img]
+
+redfetch is for updating software and scripts for EverQuest that RedGuides recommends, as well as those you "[url=https://www.redguides.com/community/watched/resources]watch[/url]". It's also open source, how nice.
+
+[HEADING=2]Installation[/HEADING]
+On Windows the easiest way to install redfetch is to [url=https://www.redguides.com/community/resources/redfetch.3177/download]download[/url] and run [url=https://www.redguides.com/community/resources/redfetch.3177/download][icode]redfetch.exe[/icode][/url]. ([i]optional: If you're still on Windows 10 and want a more modern appearance, follow [url=https://www.redguides.com/community/threads/redfetch.92998/post-634938]this guide[/url] to set [url=https://www.redguides.com/community/threads/redfetch.92998/post-634938]Windows Terminal[/url] as your default terminal.[/i])
+
+[SPOILER=Terminal / Python / Linux]
+
+
+Make sure you have a recent version of [url=https://www.python.org/downloads/]Python[/url]
+
+[list=1][*][b]Install pipx[/b][CODE=bash]python -m pip install --user pipx
+[/CODE]
+
+[*][b]Make it so you can run packages without having to type "python -m"[/b][CODE=bash]python -m pipx ensurepath
+[/CODE]
+
+[*][b]Install redfetch[/b][CODE=bash]pipx install redfetch
+[/CODE]
+
+[/list]
+When you open a new terminal window you'll be able to run redfetch by typing [icode]redfetch[/icode] from the command line.
+
+[/SPOILER]
+
+[HEADING=2]Usage[/HEADING]
+[HEADING=3]1) Double-click [url=https://www.redguides.com/community/resources/redfetch.3177/download][icode]redfetch.exe[/icode][/url] to run the script.[/HEADING]
+Take a moment to consider your configuration and the settings tab.
+
+[HEADING=3]2) Click the big blue "Easy Update" button, and then "Yes" or "Always" on the popup.[/HEADING]
+[img alt="a screenshot showing the easy update button"]https://www.redguides.com/images/redfetchupdate.gif[/img]
+(It's updating [i]Very Vanilla MQ[/i] and any of its scripts or plugins you have [url=https://www.redguides.com/community/watched/resources]watched on RedGuides[/url], your licensed resources, and scripts recommended by staff. You can customize this if you like.)
+
+Now you're ready to play EQ with the big boys.
+
+[HEADING=2]Add more MQ Scripts[/HEADING]
+To add more MacroQuest scripts, "watch" them on [url=https://www.redguides.com/community/resources]www.redguides.com/community/resources[/url], and then click the [i]Easy Update[/i] button again.
+
+[img alt="a screenshot showing the watch button on a resource page"]https://www.redguides.com/images/clickwatch.gif[/img]
+
+If there are non-MQ resources you'd like to keep in sync with redfetch, you can add them as a "special resource" in the local settings file, as shown in settings section.
+
+[HEADING=2]Command Line[/HEADING]
+To run redfetch from the command line:
+
+[TABLE]
+[TR]
+[TH].exe file[/TH]
+[TH]python[/TH]
+[/TR]
+[TR]
+[TD][icode].\redfetch.exe update[/icode][/TD]
+[TD][icode]redfetch update[/icode][/TD]
+[/TR]
+[/TABLE]
+[img alt="a screenshot showing the command line interface"]https://www.redguides.com/images/redfetchcliupdate.gif[/img]
+
+[HEADING=2]Command Line Reference[/HEADING]
+
+
+[QUOTE]
+Run [icode]redfetch --help[/icode] for the current list, or [icode]redfetch <COMMAND> --help[/icode] for a command's options. It looks like:
+
+[HEADING=3]📦 Resource Management[/HEADING]
+[list][*][icode]update[/icode] - Update all [i]watched[/i] and special resources.[list][*][icode]--force[/icode] / [icode]-f[/icode] - Force re-download of all watched resources.
+[*][icode]--server[/icode] / [icode]-s[/icode] - Update this server for this run only, without changing your current server (LIVE, TEST, EMU).
+[/list]
+
+[*][icode]download <ID_OR_URL>[/icode] - Download a specific resource by ID or URL.[list][*][icode]ID_OR_URL[/icode] - RedGuides resource ID or URL
+[*][icode]--force[/icode] / [icode]-f[/icode] - Force re-download by resetting this resource's download date.
+[*][icode]--server[/icode] / [icode]-s[/icode] - Download from this server for this run only, without changing your current server (LIVE, TEST, EMU).
+[/list]
+
+[*][icode]check[/icode] - Non-interactive update check (for automation.)[list][*][icode]--server[/icode] / [icode]-s[/icode] - Check this server's env for this run only, without persisting it (LIVE, TEST, EMU).
+[/list]
+
+[*][icode]list[/icode] - List resources and dependencies in your local cache.
+[*][icode]reset[/icode] - Reset download dates for [i]watched resources[/i] in the database.
+[/list]
+[HEADING=3]🔧 System & Utilities[/HEADING]
+[list][*][icode]ui[/icode] - Launch the [i]Terminal User Interface[/i].
+[*][icode]run [SHORTCUT][/icode] - Run a shortcut (e.g. [b]vvmq[/b], [b]eqbcs[/b], [b]myseq[/b]). [b]run[/b] by itself will show a full list.[list][*][icode]SHORTCUT[/icode] - Shortcut to run: vvmq, eqbcs, eq, eqgame, etc.
+[*][icode]--server[/icode] / [icode]-s[/icode] - Run for this server this run only, without changing your current server (LIVE, TEST, EMU).
+[/list]
+
+[*][icode]open [SHORTCUT][/icode] - Open a folder or file (e.g. [b]downloads[/b], [b]eqhost[/b]). [b]open[/b] by itself will show a full list.[list][*][icode]SHORTCUT[/icode] - Folder/file to open: downloads, vvmq, eq, etc.
+[*][icode]--server[/icode] / [icode]-s[/icode] - Resolve paths for this server this run only, without changing your current server (LIVE, TEST, EMU).
+[/list]
+
+[*][icode]web[/icode] - Launch the [b]RedGuides.com[/b] web interface.
+[*][icode]version[/icode] - Show version and exit.
+[*][icode]uninstall[/icode] - Uninstall [b]redfetch[/b] and clean up data.
+[*][icode]logout[/icode] - Log out and clear cached token and API cache.
+[/list]
+[HEADING=3]🍔 Configuration[/HEADING]
+[list][*][icode]config <SETTING_PATH> <VALUE>[/icode] - Update a setting by path and value.[list][*][icode]SETTING_PATH[/icode] - Dot-separated setting path (e.g., SPECIAL_RESOURCES.1974.opt_in)
+[*][icode]VALUE[/icode] - New value for the setting
+[*][icode]--server[/icode] / [icode]-s[/icode] - Server to apply the change in (LIVE, TEST, EMU)
+[/list]
+
+[*][icode]server <SERVER>[/icode] - Switch the current server/environment to LIVE, TEST, or EMU.[list][*][icode]SERVER[/icode] - Server to use: LIVE, TEST, EMU
+[/list]
+
+[*][icode]status[/icode] - Show the configuration for the current or specified server.[list][*][icode]--server[/icode] / [icode]-s[/icode] - Server to show (defaults to current)
+[/list]
+
+[/list]
+[HEADING=3]📤 Publishing[/HEADING]
+[list][*][icode]publish <RESOURCE_ID>[/icode] - Publish updates to a [b]RedGuides[/b] resource.[list][*][icode]RESOURCE_ID[/icode] - Existing RedGuides resource ID
+[*][icode]--description <README.md>[/icode] / [icode]-d[/icode] - Path to a description file (e.g. README.md) to become the overview description.
+[*][icode]--version[/icode] / [icode]-v[/icode] - New version string (e.g., v1.0.1)
+[*][icode]--message <CHANGELOG.md | MESSAGE>[/icode] / [icode]-m[/icode] - Path to [i]CHANGELOG.md[/i] (keep a changelog), other message file, or a direct message string.
+[*][icode]--file <FILE.zip>[/icode] / [icode]-f[/icode] - Path to your zipped release file
+[*][icode]--domain[/icode] - If description or message is a .md file with relative URLs, resolve them to this domain (e.g., https://raw.githubusercontent.com/your/repo/main/)
+[/list]
+
+[/list]
+[/QUOTE]
+
+
+The [icode]publish[/icode] command also has a [url=https://github.com/marketplace/actions/redguides-publish]GitHub Action[/url].
+
+[HEADING=2]Settings[/HEADING]
+[icode]settings.local.toml[/icode] is found in your configuration directory, which by default is [icode]c:\Users\Public\redfetch\settings.local.toml[/icode]. Any keys you add will override their default values in [url=./src/redfetch/settings.toml][icode]settings.toml[/icode][/url].
+
+All settings are prefixed with the environment,
+
+[list][*][icode][DEFAULT][/icode] - encompasses all environments that are not explicitly defined.
+[*][icode][LIVE][/icode] - EverQuest Live
+[*][icode][TEST][/icode] - EverQuest Test
+[*][icode][EMU][/icode] - EverQuest Emulator
+[/list]
+[HEADING=3]Adding a special resource[/HEADING]
+To add a "special resource" (a non-MQ resource that you want to keep updated), open [icode]settings.local.toml[/icode] and add an entry. You'll need the [url=https://www.redguides.com/community/resources/brewalls-everquest-maps.153/]resource ID (numbers at the end of the url)[/url] and a target directory. Example:
+
+[CODE=toml][LIVE.SPECIAL_RESOURCES.153]
+custom_path = 'C:\Users\Public\Daybreak Game Company\Installed Games\EverQuest\maps\Brewall_Maps'
+opt_in = true
+[/CODE]
+[list][*]Note the use of single quotes around the path, which are required for windows paths.
+[/list]
+The above will install Brewall's maps to the EQ maps directory the next time [icode]redfetch update[/icode] is run for [icode]LIVE[/icode] servers.
+
+[HEADING=3]Overwrite protection[/HEADING]
+If there are local files you don't want overwritten by a resource, you can add them to the [icode]PROTECTED_FILES_BY_RESOURCE[/icode] setting. Include the resource ID and files you want to protect. e.g.,
+
+[CODE=toml][LIVE.PROTECTED_FILES_BY_RESOURCE]
+1974 = ["CharSelect.cfg", "Zoned.cfg", "MQ2Map.ini", "MQ2MoveUtils.ini"]
+153 = ["citymist.txt", "innothule.txt", "oasis.txt"]
+navmesh = ["befallen.navmesh", "innothuleb.navmesh"]
+[/CODE]
+[HEADING=3]Custom category directories[/HEADING]
+If you share [icode]lua[/icode], [icode]macros[/icode], or [icode]plugins[/icode] directories across multiple MQ environments, you can override where an entire category is installed. Add a [icode]CATEGORY_PATHS[/icode] section to your [icode]settings.local.toml[/icode]:
+
+[CODE=toml][DEFAULT.CATEGORY_PATHS]
+lua = 'D:\\shared\\lua'
+macros = 'D:\\shared\\macros'
+[/CODE]
+Absolute paths are used as-is. Relative paths are joined to [icode]DOWNLOAD_FOLDER[/icode]. You can set this globally in [icode][DEFAULT][/icode] or per-environment ([icode][LIVE.CATEGORY_PATHS][/icode], [icode][TEST.CATEGORY_PATHS][/icode], etc.).
+
+[HEADING=2]Tinkerers[/HEADING]
+If you self-compile MacroQuest or use a discord friend's copy, you can still keep your scripts and plugins in sync with redfetch by opting out of Very Vanilla:
+
+[CODE=powershell]redfetch.exe config SPECIAL_RESOURCES.1974.opt_in false --server LIVE
+redfetch.exe config SPECIAL_RESOURCES.60.opt_in false --server EMU
+redfetch.exe config SPECIAL_RESOURCES.2218.opt_in false --server TEST
+[/CODE]
+Then assign the [i]Very Vanilla MQ[/i] path to your self-compiled MacroQuest.
+
+[HEADING=3]Custom post-update launch[/HEADING]
+redfetch can launch extra programs after an update completes. Aside from the normal UI toggles, you can add [icode]custom[/icode] to [icode]POST_UPDATE_LAUNCH.targets[/icode] in [icode]settings.local.toml[/icode], then set [icode]command[/icode] to whatever redfetch should run:
+
+[CODE=toml][LIVE.POST_UPDATE_LAUNCH]
+targets = ["custom"]
+command = ['C:\Tools\AfterRedfetch\after-update.exe', '--server', 'LIVE']
+[/CODE]
+You can also combine it with the built-in post-update launches. For example, to start EQBCS and MySEQ and run your own Python script:
+
+[CODE=toml][LIVE.POST_UPDATE_LAUNCH]
+targets = ["myseq", "custom", "eqbcs"]
+command = ["C:\\Users\\Public\\Python\\python.exe", "C:\\Users\\Public\\redfetch\\after_update.py"]
+[/CODE]
+You can set these per-server, e.g. [icode][TEST.POST_UPDATE_LAUNCH][/icode], or global [icode][DEFAULT.POST_UPDATE_LAUNCH][/icode].
+
+[img alt="Watchers on RedGuides"]https://www.redguides.com/community/resources/redfetch.3177/watchers-sparkline?months=12&w=500&h=180[/img]
+
+[HEADING=2]Contributing[/HEADING]
+I'd love help, conceptually and technically. I'm not a developer and this is my first big python script.
+
+[admonition=note]This project is built with LLM assistance.[/admonition]
+To set up a [url=https://hatch.pypa.io/latest/environment/]development environment[/url],
+
+[CODE=bash]git clone https://github.com/RedGuides/redfetch
+cd redfetch
+pip install hatch
+hatch env create dev
+hatch shell dev
+[/CODE]
+You can then run your dev version with,
+
+[icode]redfetch[/icode]
+
+Or if the issue is ui-specific, run the [url=https://textual.textualize.io/guide/devtools/#live-editing]terminal UI in debug mode[/url],
+
+[icode]textual run --dev .\src\redfetch\main.py[/icode]
+
+When you're done, type [icode]exit[/icode] to leave the shell.
+
+[CODE]Say you have a paragraph that
+is formatted for a specific
+length, so it has new line
+characters without a space at
+the end, like this text ...
+[/CODE]

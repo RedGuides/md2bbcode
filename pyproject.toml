@@ -4,11 +4,15 @@ description = "Convert Markdown to BBCode using a custom Mistune renderer."
 readme = "README.md"
 license = "GPL-3.0-or-later"
 dynamic = ["version"]
+requires-python = ">=3.12"
 authors = [
   { name = "Redbot", email = "ask@redguides.com" }
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
   "Operating System :: OS Independent",
   "Development Status :: 5 - Production/Stable",
@@ -24,8 +28,8 @@ dependencies = [
 
 [project.scripts]
 md2bbcode = "md2bbcode.main:main"
-md2ast = "md2bbcode.md2ast:main"
-html2bbcode = "md2bbcode.html2bbcode:main"
+md2ast = "md2bbcode.main:md2ast_main"
+html2bbcode = "md2bbcode.main:html2bbcode_main"
 
 [project.urls]
 Repository = "https://github.com/RedGuides/md2bbcode.git"
@@ -39,10 +43,13 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 source = "vcs"
 
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.12", "3.13", "3.14"]
+
 [tool.hatch.build.targets.sdist]
 include = [
   "README.md",
-  "LICENSE",
+  "LICENSE.txt",
   "src/md2bbcode/*.py",
   "src/md2bbcode/plugins/*.py",
   "src/md2bbcode/renderers/*.py",
