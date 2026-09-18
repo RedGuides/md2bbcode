@@ -5,8 +5,8 @@
 [HEADING=1]md2bbcode[/HEADING]
 [B]A wrapper and plugin for [URL=https://github.com/lepture/mistune]Mistune[/URL].[/B] It converts most GitHub-flavored Markdown to Xenforo-flavored BBCode.
 
-[ADMONITION=tip]Custom BBCodes made for RedGuides are included in [ICODE]bb_codes.xml[/ICODE], import the ones you want in your Xenforo installation at [ICODE]admin.php?bb-codes[/ICODE]. Some custom BBCodes include css, which you can split off to your extra.css template for more efficiency.[/ADMONITION]
-[ADMONITION=note]This project is made with LLM assistance (derogatory).[/ADMONITION]
+[QUOTE][B]Tip:[/B] Custom BBCodes made for RedGuides are included in [ICODE]bb_codes.xml[/ICODE], import the ones you want in your Xenforo installation at [ICODE]admin.php?bb-codes[/ICODE]. Some custom BBCodes include css, which you can split off to your extra.css template for more efficiency.[/QUOTE]
+[QUOTE][B]Note:[/B] This project is made with LLM assistance (derogatory).[/QUOTE]
 [HEADING=2]Installation[/HEADING]
 Install as a CLI tool with [URL=https://pipx.pypa.io]pipx[/URL]:
 
@@ -65,11 +65,11 @@ cd md2bbcode
 
 [/LIST]
 [HEADING=3]renderers/bbcode.py[/HEADING]
-The custom plugin for Mistune, which converts AST to bbcode.[SUP][U][JUMPTO=fn-1]1[/JUMPTO][/U][/SUP]
+The custom plugin for Mistune, which converts AST to bbcode.[U]1[/U]
 
 [HEADING=2]Additional Tools[/HEADING]
 [HEADING=3]html2bbcode[/HEADING]
-Converts most HTML tags typically allowed in Github Flavored Markdown to BBCode.[SUP][U][JUMPTO=fn-2]2[/JUMPTO][/U][/SUP]
+Converts most HTML tags typically allowed in Github Flavored Markdown to BBCode.[U]2[/U]
 
 [CODE=bash]html2bbcode input_file.html
 [/CODE]
@@ -115,16 +115,16 @@ Here are a few GitHub-flavored Markdown features so you can use this README.md f
 [TR]
 [TD][LEFT]Superscript[/LEFT][/TD]
 [TD][CENTER][ICODE]<sup>2</sup>[/ICODE][/CENTER][/TD]
-[TD][RIGHT]E=mc[SUP]2[/SUP][/RIGHT][/TD]
+[TD][RIGHT]E=mc2[/RIGHT][/TD]
 [/TR]
 [TR]
 [TD][LEFT]Subscript[/LEFT][/TD]
 [TD][CENTER][ICODE]<sub>2</sub>[/ICODE][/CENTER][/TD]
-[TD][RIGHT]H[SUB]2[/SUB]O[/RIGHT][/TD]
+[TD][RIGHT]H2O[/RIGHT][/TD]
 [/TR]
 [/TABLE]
 [SPOILER=HTML spoiler (details/summary)]
-[B]html2bbcode[/B] test. This is hidden content. Water is H[SUB]2[/SUB]O.
+[B]html2bbcode[/B] test. This is hidden content. Water is H2O.
 
 [COLOR=red][SIZE=3][FONT=Arial]Font tag inside details size 3 Arial red[/FONT][/SIZE][/COLOR]
 
@@ -134,7 +134,7 @@ Here are a few GitHub-flavored Markdown features so you can use this README.md f
 This is a quote by John Doe[/QUOTE]
 [/SPOILER]
 [B]Footnotes:[/B]
-[ANAME=fn-1]1[/ANAME]. Mistune does not convert Markdown HTML to AST, hence the need for [ICODE]html2bbcode[/ICODE].
+1. Mistune does not convert Markdown HTML to AST, hence the need for [ICODE]html2bbcode[/ICODE].
 
-[ANAME=fn-2]2[/ANAME]. Currently used for post-processing mistune output. Reference: https://github.github.com/gfm/#raw-html
+2. Currently used for post-processing mistune output. Reference: https://github.github.com/gfm/#raw-html
 

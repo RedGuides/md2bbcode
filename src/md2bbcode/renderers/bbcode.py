@@ -4,7 +4,9 @@ import re
 from urllib.parse import urljoin, urlparse
 
 from md2bbcode.dialect import get_dialect
+from md2bbcode.html_tokens import unescape_references
 from md2bbcode.image_rewrite import rewrite_svg_url
+from md2bbcode.plugins import pair_html
 
 _HARMFUL_SCHEMES = ('javascript:', 'vbscript:', 'data:')
 
@@ -41,9 +43,16 @@ class BBCodeRenderer(BaseRenderer):
         self.dialect = get_dialect(dialect)
         self.tag = self.dialect.render
 
+    def __call__(self, tokens, state):
+        # Match HTML tags before rendering.
+        return self.render_tokens(pair_html(list(tokens)), state)
+
     def render_token(self, token, state):
         func = self._get_method(token['type'])
         attrs = token.get('attrs')
+        if token['type'] == 'block_spoiler' and attrs and 'title' in attrs:
+            # Render <summary> content as the spoiler title.
+            attrs = {**attrs, 'title': self.render_tokens(attrs['title'], state).strip()}
 
         if 'raw' in token:
             text = token['raw']
@@ -60,7 +69,8 @@ class BBCodeRenderer(BaseRenderer):
             return func(text)
 
     def text(self, text: str) -> str:
-        return text
+        # Decode HTML escapes in text, not code.
+        return unescape_references(text)
 
     def emphasis(self, text: str) -> str:
         return self.tag('emphasis', text=text)
@@ -97,11 +107,40 @@ class BBCodeRenderer(BaseRenderer):
         return ' '
 
     def inline_html(self, html: str) -> str:
-        # Leave HTML as it is for now. html2bbcode converts it later.
-        return html
+        # Keep or strip leftover HTML.
+        return html if self.dialect.unknown_html == 'keep' else ''
 
-    def paragraph(self, text: str) -> str:
-        return text + self.dialect.paragraph_separator
+    def font(self, text: str, color=None, size=None, face=None) -> str:
+        if face:
+            text = self.tag('font_face', text=text, face=face)
+        if size:
+            text = self.tag('font_size', text=text, size=size)
+        if color:
+            text = self.tag('font_color', text=text, color=color)
+        return text
+
+    def email(self, text: str, address: str) -> str:
+        return self.tag('email', text=text, address=address)
+
+    def link_anchor(self, text: str, anchor: str) -> str:
+        return self.tag('link_anchor', text=text, anchor=anchor)
+
+    def anchor(self, text: str, name: str) -> str:
+        return self.tag('anchor', text=text, name=name)
+
+    def paragraph(self, text: str, align=None) -> str:
+        body = text.rstrip('\n')
+        if not body.strip():
+            # Keep standalone line breaks.
+            return text
+        if align:
+            body = self.tag('align_' + align, text=body)
+        return body + self.dialect.paragraph_separator
+
+    def div(self, text: str, align=None) -> str:
+        if align and text.strip():
+            return self.tag('align_' + align, text=text.rstrip('\n')) + self.dialect.paragraph_separator
+        return text
 
     def heading(self, text: str, level: int, **attrs) -> str:
         return self.dialect.heading(level, text) + '\n'
@@ -116,8 +155,7 @@ class BBCodeRenderer(BaseRenderer):
         return text
 
     def block_code(self, code: str, **attrs) -> str:
-        # Code is emitted verbatim; the html2bbcode pass stashes [CODE] blocks
-        # before HTML parsing, so escaping here would only leak entities.
+        # Leave code as written.
         special_cases = {
             'plaintext': None  # Default [CODE]
         }
@@ -131,22 +169,25 @@ class BBCodeRenderer(BaseRenderer):
 
         if bbcode_lang:
             return self.tag('block_code', text=code, lang=bbcode_lang) + '\n'
-        # No language specified, render with a generic [CODE] tag
+        # No language specified, render with a plain [CODE] tag
         return self.tag('block_code_nolang', text=code) + '\n'
 
-    def block_quote(self, text: str) -> str:
+    def block_quote(self, text: str, author=None) -> str:
+        if author:
+            return self.tag('block_quote_author', text=text, author=author.replace('"', "'")) + '\n'
+
         # GFMD "alerts"/admonitions are expressed as a blockquote
         # Render these into a dedicated XenForo custom BBCode, rather than a normal QUOTE.
         m = re.match(r"^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*", text, flags=re.IGNORECASE)
         if m:
             kind = m.group(1).lower()
             body = text[m.end():].strip()
-            return self.tag('admonition', text=body, kind=kind) + '\n'
+            return self.tag('admonition', text=body, kind=kind, label=kind.capitalize()) + '\n'
 
         return self.tag('block_quote', text=text) + '\n'
 
     def block_html(self, html: str) -> str:
-        return html + '\n'
+        return self.inline_html(html) + '\n'
 
     def block_error(self, text: str) -> str:
         return self.tag('block_error', text=text) + '\n'
@@ -178,12 +219,20 @@ class BBCodeRenderer(BaseRenderer):
     def inline_spoiler(self, text: str) -> str:
         return self.tag('inline_spoiler', text=text)
 
-    def block_spoiler(self, text: str) -> str:
-        return self.tag('block_spoiler_notitle', text='\n' + text + '\n')
+    def block_spoiler(self, text: str, title=None) -> str:
+        if text.endswith('\n'):
+            # Put block content on its own lines.
+            text = '\n' + text.strip('\n') + '\n'
+        if title:
+            return self.tag('block_spoiler', text=text, title=title) + '\n'
+        return self.tag('block_spoiler_notitle', text=text) + '\n'
 
     def footnote_ref(self, key: str, index: int):
-        # Use superscript for the footnote reference
-        return self.tag('footnote_ref', index=index)
+        # Use footnote links and superscript where supported.
+        link = str(index)
+        if self.dialect.has_anchors:
+            link = self.tag('link_anchor', text=link, anchor=f'fn-{index}')
+        return self.tag('superscript', text=self.tag('footnote_ref', index=index, link=link))
 
     def footnotes(self, text: str):
         # Optionally wrap all footnotes in a specific section if needed
@@ -191,7 +240,8 @@ class BBCodeRenderer(BaseRenderer):
 
     def footnote_item(self, text: str, key: str, index: int):
         # Define the footnote with an anchor at the end of the document
-        return self.tag('footnote_item', text=text, index=index)
+        target = self.tag('anchor', text=str(index), name=f'fn-{index}')
+        return self.tag('footnote_item', text=text, index=index, target=target)
 
     def table(self, children, **attrs):
         return self.tag('table', text=children) + '\n'

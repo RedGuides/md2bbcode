@@ -12,7 +12,9 @@ Mis-nested: <b><i>bold italic</b></i> end.
 
 Stray closers: before </b> after, before </custom> after.
 
-Unknown: <custom-tag data-x="1"><b>Bold</b></custom-tag> and <video src="x.mp4"></video>.
+Unknown: <custom-tag data-x="1"><b>Bold</b></custom-tag> and <iframe src="x.html"></iframe>.
+
+Media: <video src="x.mp4" controls>No video support.</video>, <audio src="x.ogg"></audio>, but <video controls><source src="y.mp4"></video>.
 
 Entities inside HTML: <span>&amp;lt; and &copy;</span>, in code: `&amp;lt;`.
 

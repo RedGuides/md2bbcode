@@ -22,8 +22,7 @@ classifiers = [
   "Topic :: Text Processing :: Markup :: Markdown"
 ]
 dependencies = [
-  "mistune>=3.3.4",
-  "beautifulsoup4>=4.15.0"
+  "mistune>=3.3.4"
 ]
 
 [project.scripts]
@@ -56,11 +55,9 @@ include = [
   "LICENSE.txt",
   "src/md2bbcode/*.py",
   "src/md2bbcode/dialects/*.toml",
-  "src/md2bbcode/plugins/*.py",
-  "src/md2bbcode/renderers/*.py",
-  "bb_codes.xml"
+  "src/md2bbcode/dialects/*.xml",
+  "src/md2bbcode/renderers/*.py"
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/md2bbcode"]
-include = ["bb_codes.xml"]

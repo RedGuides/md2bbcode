@@ -134,7 +134,7 @@ def test_html2bbcode_reads_stdin(monkeypatch, capsys):
 @pytest.fixture
 def board(tmp_path):
     path = tmp_path / "board.toml"
-    path.write_text('extends = "xenforo"\n[tags]\ncodespan = "[code]{text}[/code]"\n', encoding="utf-8")
+    path.write_text('[tags]\ncodespan = "[code]{text}[/code]"\n', encoding="utf-8")
     return str(path)
 
 
@@ -186,7 +186,7 @@ def test_dump_config_needs_no_input_and_is_a_working_config(board, readme, tmp_p
     assert out.startswith("[code]x[/code]")
 
 
-def test_dump_config_prints_the_default_preset(capsys):
+def test_dump_config_prints_the_built_in_settings(capsys):
     md2bbcode_main.main(["--dump-config"])
     out, _ = capsys.readouterr()
     assert 'name = "xenforo"' in out and "[tags]" in out
@@ -195,7 +195,6 @@ def test_dump_config_prints_the_default_preset(capsys):
 @pytest.mark.parametrize(
     "extra, expected",
     [
-        (["--preset", "phpbb9"], "unknown preset: 'phpbb9'"),
         (["--config", "no-such-board.toml"], "config file not found: no-such-board.toml"),
         (["--domain", "example.com"], "--domain must be a full URL"),
         # Bad URLs should show a short error, not a traceback.

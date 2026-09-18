@@ -5,10 +5,15 @@ from pathlib import Path
 
 import pytest
 
+from md2bbcode import Dialect
 from md2bbcode.main import process_readme
 
 FIXTURES = Path(__file__).parent / "fixtures"
-PRESETS = ["xenforo"]
+# "xenforo" includes the RedGuides BB codes that ship with md2bbcode; "xenforo-stock" is a board with none.
+DIALECTS = {
+    "xenforo": lambda: Dialect.defaults(),
+    "xenforo-stock": lambda: Dialect.defaults(bb_codes=False),
+}
 CASES = sorted(p.stem for p in FIXTURES.glob("*.md"))
 
 
@@ -31,16 +36,16 @@ def _options(case: str) -> dict:
     return {}
 
 
-def convert_fixture(case: str, preset: str) -> str:
+def convert_fixture(case: str, name: str) -> str:
     markdown = _read(FIXTURES / f"{case}.md")
-    return process_readme(markdown, dialect=preset, **_options(case))
+    return process_readme(markdown, dialect=DIALECTS[name](), **_options(case))
 
 
-@pytest.mark.parametrize("preset", PRESETS)
+@pytest.mark.parametrize("name", DIALECTS)
 @pytest.mark.parametrize("case", CASES)
-def test_golden(case: str, preset: str, update_goldens: bool):
-    expected_path = FIXTURES / f"{case}.{preset}.bbcode"
-    actual = convert_fixture(case, preset)
+def test_golden(case: str, name: str, update_goldens: bool):
+    expected_path = FIXTURES / f"{case}.{name}.bbcode"
+    actual = convert_fixture(case, name)
 
     if update_goldens:
         _write(expected_path, actual)
@@ -56,6 +61,6 @@ def test_every_golden_has_a_fixture():
     # Catch a renamed or deleted .md whose .bbcode was left behind.
     for golden in FIXTURES.glob("*.bbcode"):
         case = golden.name
-        for preset in PRESETS:
-            case = case.removesuffix(f".{preset}.bbcode")
+        for name in DIALECTS:
+            case = case.removesuffix(f".{name}.bbcode")
         assert (FIXTURES / f"{case}.md").exists(), f"orphan golden {golden.name}"

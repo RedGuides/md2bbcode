@@ -5,8 +5,9 @@ from md2bbcode.main import process_readme
 
 
 def test_redguides_specific_bbcodes_from_xml():
+    # The export ships inside the package, where the built-in settings read it from.
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    bbcode_xml_path = os.path.join(repo_root, "bb_codes.xml")
+    bbcode_xml_path = os.path.join(repo_root, "src", "md2bbcode", "dialects", "bb_codes.xml")
 
     tree = ET.parse(bbcode_xml_path)
     root = tree.getroot()

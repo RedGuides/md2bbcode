@@ -1,13 +1,14 @@
-# Default: XenForo 2.x with RedGuides tags from bb_codes.xml.
-#
-# Tag names are UPPERCASE, option names lowercase. XenForo lowercases both
-# before it looks anything up (XF\BbCode\Parser::openTag), so case is ours to
-# choose; uppercase is what XenForo's own HTML-to-BBCode converter writes
-# (XF\Html\Renderer\BbCode), which is also what the rich editor rewrites a post
-# to the first time someone saves it. Writing it that way means a generated post
-# and an edited one differ only where the author edited.
+# Built-in XenForo 2.x tags, with custom tags from the export below.
+# RedGuides tags are bundled; export your own at admin.php?bb-codes.
+# Uppercase tags and lowercase options match XenForo's editor.
 name = "xenforo"
 paragraph_separator = "\n\n"
+# Keep or strip unsupported HTML tags.
+unknown_html = "keep"
+# Letter case for custom tags too.
+tag_case = "upper"
+# Custom tag export; false disables custom tags (--no-custom-bbcode).
+bb_codes = "bb_codes.xml"
 
 [tags]
 # inline
@@ -15,16 +16,25 @@ strong          = "[B]{text}[/B]"
 emphasis        = "[I]{text}[/I]"
 insert          = "[U]{text}[/U]"
 strikethrough   = "[S]{text}[/S]"
-mark            = "[MARK]{text}[/MARK]"
-superscript     = "[SUP]{text}[/SUP]"
-subscript       = "[SUB]{text}[/SUB]"
+# custom on most boards: mark, superscript, subscript, abbr, anchor, pixelate, admonition
+mark            = "{text}"
+superscript     = "{text}"
+subscript       = "{text}"
 codespan        = "[ICODE]{text}[/ICODE]"
 inline_spoiler  = "[ISPOILER]{text}[/ISPOILER]"
-abbr            = "[ABBR={title}]{text}[/ABBR]"
+abbr            = "{text}"
 link            = "[URL={url}]{text}[/URL]"
-image           = "[IMG]{url}[/IMG]"
+# HTML only, for now: <a href="#x">, <a name="x"> and <a href="mailto:...">.
+link_anchor     = "[URL=#{anchor}]{text}[/URL]"
+anchor          = "{text}"
+email           = "[EMAIL]{address}[/EMAIL]"
+# <font> and inline CSS
+font_color      = "[COLOR={color}]{text}[/COLOR]"
+font_size       = "[SIZE={size}]{text}[/SIZE]"
+font_face       = "[FONT={face}]{text}[/FONT]"
+image           ="[IMG]{url}[/IMG]"
 image_alt       = "[IMG alt=\"{alt}\"]{url}[/IMG]"
-pixelate        = "[PIXELATE]{text}[/PIXELATE]"
+pixelate        = "{text}"
 linebreak       = "\n"
 
 # blocks
@@ -33,7 +43,8 @@ thematic_break  = "[HR][/HR]"
 block_code      = "[CODE={lang}]{text}[/CODE]"
 block_code_nolang = "[CODE]{text}[/CODE]"
 block_quote     = "[QUOTE]\n{text}[/QUOTE]"
-admonition      = "[ADMONITION={kind}]{text}[/ADMONITION]"
+block_quote_author = "[QUOTE=\"{author}\"]\n{text}[/QUOTE]"
+admonition      = "[QUOTE][B]{label}:[/B] {text}[/QUOTE]"
 block_spoiler   = "[SPOILER={title}]{text}[/SPOILER]"
 block_spoiler_notitle = "[SPOILER]{text}[/SPOILER]"
 block_error     = "[COLOR=red][ICODE]{text}[/ICODE][/COLOR]"
@@ -58,6 +69,6 @@ align_center    = "[CENTER]{text}[/CENTER]"
 align_right     = "[RIGHT]{text}[/RIGHT]"
 
 # footnotes
-footnote_ref    = "[SUP][U][JUMPTO=fn-{index}]{index}[/JUMPTO][/U][/SUP]"
+footnote_ref    = "[U]{link}[/U]"
 footnotes       = "[B]Footnotes:[/B]\n{text}"
-footnote_item   = "[ANAME=fn-{index}]{index}[/ANAME]. {text}"
+footnote_item   = "{target}. {text}"

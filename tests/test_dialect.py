@@ -1,4 +1,4 @@
-"""Test forum presets, custom tags, and config errors."""
+"""Test the built-in tag settings, config overrides, and config errors."""
 
 import re
 import tomllib
@@ -15,36 +15,33 @@ def _dialect(toml_text: str, **kwargs) -> Dialect:
     return Dialect.from_dict(tomllib.loads(toml_text), source="board.toml", **kwargs)
 
 
-def test_xenforo_is_the_default_and_defines_every_tag():
-    xenforo = Dialect.preset()
+def test_the_built_in_settings_define_every_tag():
+    xenforo = Dialect.defaults()
     assert xenforo.name == "xenforo"
     assert set(xenforo.tags) | {"heading"} == set(TAGS)
-    assert "xenforo" in Dialect.presets()
 
 
-@pytest.mark.parametrize("preset", Dialect.presets())
-def test_a_preset_writes_every_tag_name_in_one_case(preset):
-    # Boards read BBCode case-insensitively, so a preset may pick either case,
-    # but mixing them within one preset makes the output look accidental. The
-    # xenforo preset uses upper case, matching XenForo's own HTML-to-BBCode
-    # renderer and what its editor rewrites a post to on the first save.
-    board = Dialect.preset(preset)
+def test_every_tag_name_is_written_in_one_case():
+    # Boards read BBCode case-insensitively, so either case would work, but mixing
+    # them makes the output look accidental. Upper case matches XenForo's own
+    # HTML-to-BBCode renderer and what its editor rewrites a post to on the first save.
+    board = Dialect.defaults()
     templates = list(board.tags.values()) + list(board.headings.values())
     names = [name for template in templates for name in _TAG_NAME_RE.findall(template)]
-    assert names, f"{preset}: no tags found, the regex is wrong"
+    assert names, "no tags found, the regex is wrong"
 
     mixed = sorted({name for name in names if not name.isupper()} if names[0].isupper()
                    else {name for name in names if not name.islower()})
-    assert not mixed, f"{preset}: tag names are mixed case: {', '.join(mixed)}"
+    assert not mixed, f"tag names are mixed case: {', '.join(mixed)}"
 
 
 def test_issue_2_override_changes_markdown_and_html_code_spans():
-    board = _dialect('extends = "xenforo"\n[tags]\ncodespan = "[code]{text}[/code]"\n')
+    board = _dialect('[tags]\ncodespan = "[code]{text}[/code]"\n')
     result = process_readme("Run `pip` then <code>hatch</code> or <kbd>Ctrl</kbd>.", dialect=board)
     assert result == "Run [code]pip[/code] then [code]hatch[/code] or [code]Ctrl[/code].\n\n"
 
 
-def test_extends_defaults_to_xenforo_and_keeps_every_other_tag():
+def test_a_config_keeps_every_tag_it_does_not_name():
     board = _dialect('[tags]\nstrong = "[bold]{text}[/bold]"\n')
     assert process_readme("**a** *b*", dialect=board) == "[bold]a[/bold] [I]b[/I]\n\n"
 
@@ -62,14 +59,12 @@ def test_heading_levels_merge_and_deeper_levels_use_the_last_one_defined():
 
 
 @pytest.mark.parametrize("tag", ["tt", "code_inline", "inline-code", "1code", "iCode"])
-def test_renamed_code_tag_still_protects_html_inside_code(tag):
-    # Renaming a code tag must not change the HTML inside it.
+def test_renamed_code_tag_does_not_change_html_inside_code(tag):
     board = _dialect(f'[tags]\ncodespan = "[{tag}]{{text}}[/{tag}]"\n')
-    assert board.code_tag_names() == {"code", tag.lower()}
     assert process_readme("`<b>not bold</b>`", dialect=board) == f"[{tag}]<b>not bold</b>[/{tag}]\n\n"
 
 
-def test_renamed_block_code_tag_still_protects_html_inside_a_fenced_block():
+def test_renamed_block_code_tag_does_not_change_html_inside_a_fenced_block():
     board = _dialect('[tags]\nblock_code_nolang = "[code_block]{text}[/code_block]"\n')
     markdown = "```\n<font color=\"red\">danger</font>\n<!-- keep me -->\n```\n"
     assert process_readme(markdown, dialect=board) == (
@@ -77,27 +72,49 @@ def test_renamed_block_code_tag_still_protects_html_inside_a_fenced_block():
     )
 
 
-def test_a_wrapped_code_template_protects_the_inner_tag_not_the_wrapper():
-    # Protect [icode], not [b], so HTML in bold text still gets converted.
+def test_html_is_converted_inside_a_tag_that_shares_its_name_with_a_code_template():
     board = _dialect('[tags]\ncodespan = "[b][icode]{text}[/icode][/b]"\n')
-    assert board.code_tag_names() == {"code", "icode"}
-    assert process_readme("**bold with <i>italic</i> inside**", dialect=board) == (
-        "[B]bold with [I]italic[/I] inside[/B]\n\n"
+    assert process_readme("**bold with <i>italic</i> inside** `<i>code</i>`", dialect=board) == (
+        "[B]bold with [I]italic[/I] inside[/B] [b][icode]<i>code</i>[/icode][/b]\n\n"
     )
 
 
-def test_a_dropped_code_tag_contributes_no_plain_tag():
+def test_html_inside_code_stays_as_written_even_with_the_code_tag_dropped():
     board = _dialect('[tags]\ncodespan = "{text}"\n')
-    assert board.code_tag_names() == {"code"}
+    assert process_readme("`<b>not bold</b>` and <code>&lt;i&gt;</code>", dialect=board) == "<b>not bold</b> and <i>\n\n"
 
 
-def test_spoiler_and_paragraph_settings_reach_the_html_pass():
+def test_every_html_tag_comes_from_the_dialect():
     board = _dialect(
         'paragraph_separator = "\\n"\n'
-        '[tags]\nblock_spoiler = "[hide={title}]{text}[/hide]"\n'
+        "[tags]\n"
+        'block_spoiler = "[hide={title}]{text}[/hide]"\n'
+        'strong = "[bold]{text}[/bold]"\n'
+        'font_color = "[c={color}]{text}[/c]"\n'
+        'link_anchor = "{text}"\n'
+        'email = "[url=mailto:{address}]{text}[/url]"\n'
+        'block_quote_author = "[quote={author}]{text}[/quote]"\n'
+        'table_cell = "[cell]{text}[/cell]"\n'
     )
     html = "<details><summary>More</summary><p>one</p><p>two</p></details>"
-    assert process_readme(html, dialect=board).strip() == "[hide=More]one\ntwo\n[/hide]"
+    assert process_readme(html, dialect=board) == "[hide=More]\none\ntwo\n[/hide]\n"
+
+    inline = '<b>b</b> <font color="red">r</font> <a href="#top">up</a> <a href="mailto:a@b.c">mail</a>'
+    assert process_readme(inline, dialect=board) == "[bold]b[/bold] [c=red]r[/c] up [url=mailto:a@b.c]mail[/url]\n"
+
+    blocks = '<blockquote data-author="Al">q</blockquote><table><tr><td>x</td></tr></table>'
+    assert process_readme(blocks, dialect=board) == "[quote=Al]q[/quote]\n[TABLE]\n[TR]\n[cell]x[/cell]\n[/TR]\n[/TABLE]\n"
+
+
+def test_unknown_html_is_kept_or_stripped():
+    markdown = 'A <custom-tag data-x="1"><b>bold</b></custom-tag> and <b>never closed.\n\n<section>\n\nInside.\n\n</section>\n'
+    assert process_readme(markdown) == (
+        'A <custom-tag data-x="1">[B]bold[/B]</custom-tag> and <b>never closed.\n\n<section>\n\nInside.\n\n</section>\n\n'
+    )
+
+    board = _dialect('unknown_html = "strip"\n')
+    assert process_readme(markdown, dialect=board) == "A [B]bold[/B] and never closed.\n\nInside.\n\n"
+    assert 'unknown_html = "strip"' in board.to_toml()
 
 
 def test_dumped_config_loads_back_to_the_same_dialect():
@@ -128,8 +145,9 @@ def test_literal_braces_are_written_doubled():
         ('[tags]\nheading = { 7 = "[h7]{text}[/h7]" }\n', "tags.heading.7"),
         ('[tags]\nheading = { 2 = "[h2][/h2]" }\n', "tags.heading.2 must contain {text}"),
         ('paragraph_seperator = "\\n"\n', "unknown setting: paragraph_seperator"),
-        ('extends = "phpbb9"\n', "unknown preset: 'phpbb9' (available: "),
-        ('extends = "../secrets"\n', "unknown preset"),
+        ('unknown_html = "drop"\n', 'unknown_html must be "keep" or "strip"'),
+        ('[tags]\nemail = "[email]{addres}[/email]"\n', "tags.email: unknown placeholder {addres}"),
+        ('extends = "xenforo"\n', "unknown setting: extends"),
     ],
 )
 def test_bad_config_names_the_file_and_the_key(toml_text, expected):
@@ -138,14 +156,13 @@ def test_bad_config_names_the_file_and_the_key(toml_text, expected):
     message = str(excinfo.value)
     assert expected in message
     assert "\n" not in message
-    if "preset" not in expected:
-        assert message.startswith("board.toml: ")
+    assert message.startswith("board.toml: ")
 
 
-def test_load_reads_a_file_and_preset_argument_replaces_extends(tmp_path):
+def test_load_reads_a_file_and_names_the_dialect_after_it(tmp_path):
     path = tmp_path / "myboard.toml"
-    path.write_text('extends = "nope"\n[tags]\ncodespan = "[c]{text}[/c]"\n', encoding="utf-8")
-    board = Dialect.load(path, preset="xenforo")
+    path.write_text('[tags]\ncodespan = "[c]{text}[/c]"\n', encoding="utf-8")
+    board = Dialect.load(path)
     assert board.name == "myboard"
     assert board.render("codespan", text="x") == "[c]x[/c]"
 

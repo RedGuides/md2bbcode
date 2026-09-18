@@ -104,12 +104,32 @@ def test_span_and_div_without_style_convert_children():
 
 
 def test_unknown_html_passthrough():
+    # The tag we do not know stays as written; what is inside it is still converted.
     markdown = "<custom-tag data-x=\"1\"><b>Bold</b></custom-tag>"
     result = process_readme(markdown, domain="")
 
-    assert "<custom-tag data-x=\"1\">" in result
-    assert "<b>Bold</b>" in result
-    assert "[b]" not in result
+    assert result == "<custom-tag data-x=\"1\">[B]Bold[/B]</custom-tag>\n\n"
+
+
+def test_video_and_audio_become_a_link_to_the_file():
+    # XenForo plays video through attachments and media sites, neither of which a
+    # README can address, so the next best thing is a link someone can click.
+    markdown = (
+        '<video src="demo.mp4" controls>Your browser cannot play this.</video>\n\n'
+        '<audio src="https://example.com/clip.ogg"></audio>\n'
+    )
+    assert process_readme(markdown, domain="https://example.com/r/") == (
+        "[URL=https://example.com/r/demo.mp4]demo.mp4[/URL]\n\n"
+        "[URL=https://example.com/clip.ogg]https://example.com/clip.ogg[/URL]\n\n"
+    )
+
+
+def test_a_video_built_from_source_children_stays_as_written():
+    # There is no src to link to without picking one of the sources, so leave it alone.
+    markdown = '<video controls><source src="a.mp4" type="video/mp4">Fallback.</video>'
+    result = process_readme(markdown, domain="")
+
+    assert result == '<video controls><source src="a.mp4" type="video/mp4">Fallback.</video>\n\n'
 
 
 def test_standalone_html_comment_is_dropped():

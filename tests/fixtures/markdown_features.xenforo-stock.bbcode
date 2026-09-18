@@ -4,10 +4,10 @@
 [HEADING=3]Heading four[/HEADING]
 [HEADING=3]Heading five[/HEADING]
 [HEADING=3]Heading six[/HEADING]
-Plain paragraph with [B]bold[/B], [I]italic[/I], [I][B]both[/B][/I], [S]struck[/S], [MARK]marked[/MARK], [U]inserted[/U], a soft line break, and a hard break at the end of this line.
+Plain paragraph with [B]bold[/B], [I]italic[/I], [I][B]both[/B][/I], [S]struck[/S], marked, [U]inserted[/U], a soft line break, and a hard break at the end of this line.
 Next line after the hard break. Inline [ICODE]code[/ICODE] and a longer [ICODE]`nested`[/ICODE] code span.
 
-E=mc[SUP]2[/SUP] and H[SUB]2[/SUB]O. Entities: © 2024, 5 < 6 & 7 > 3. Literal: 5 < 6 and a lone & ampersand.
+E=mc2 and H2O. Entities: © 2024, 5 < 6 & 7 > 3. Literal: 5 < 6 and a lone & ampersand.
 
 Inline [ISPOILER]spoiler text[/ISPOILER] in a sentence.
 
@@ -23,11 +23,11 @@ Nested quote.
 
 [/QUOTE]
 [/QUOTE]
-[ADMONITION=note]A note.[/ADMONITION]
-[ADMONITION=tip]A tip with [ICODE]code[/ICODE].[/ADMONITION]
-[ADMONITION=important]Important.[/ADMONITION]
-[ADMONITION=warning]Warning.[/ADMONITION]
-[ADMONITION=caution]Caution.[/ADMONITION]
+[QUOTE][B]Note:[/B] A note.[/QUOTE]
+[QUOTE][B]Tip:[/B] A tip with [ICODE]code[/ICODE].[/QUOTE]
+[QUOTE][B]Important:[/B] Important.[/QUOTE]
+[QUOTE][B]Warning:[/B] Warning.[/QUOTE]
+[QUOTE][B]Caution:[/B] Caution.[/QUOTE]
 [QUOTE]
 [!FOO] Not an alert.
 
@@ -76,7 +76,7 @@ line three
 [B]Term two[/B] :
 [INDENT]Definition two[/INDENT]
 
-The [ABBR=Hyper Text Markup Language]HTML[/ABBR] spec is maintained by the [ABBR=World Wide Web Consortium]W3C[/ABBR].
+The HTML spec is maintained by the W3C.
 
 [TABLE]
 [TR]
@@ -112,16 +112,16 @@ The [ABBR=Hyper Text Markup Language]HTML[/ABBR] spec is maintained by the [ABBR
 [/TABLE]
 
 [/LIST]
-Footnote reference one[SUP][U][JUMPTO=fn-1]1[/JUMPTO][/U][/SUP] and two[SUP][U][JUMPTO=fn-2]2[/JUMPTO][/U][/SUP].
+Footnote reference one[U]1[/U] and two[U]2[/U].
 
 Links: [URL=https://example.com/path?q=1&r=2]absolute[/URL], [URL=docs/guide.md]relative[/URL], [URL=#heading-two]anchor[/URL], [URL=mailto:someone@example.com]mailto[/URL], [URL=//example.com/x]protocol relative[/URL], [URL=#harmful-link]harmful[/URL], [URL=https://autolink.example.com]https://autolink.example.com[/URL], and bare https://bare.example.com.
 
-Images: [IMG alt="png"]https://example.com/image.png[/IMG], [IMG alt="svg"]https://images.weserv.nl/?url=https%3A%2F%2Fexample.com%2Flogo.svg&output=png[/IMG], [PIXELATE][IMG alt="pixel art alt"]https://example.com/sprite.png[/IMG][/PIXELATE], [IMG]https://example.com/noalt.png[/IMG], [IMG alt="relative"]images/local.png[/IMG], [URL=https://github.com/o/r/actions][IMG alt="badge"]https://raster.shields.io/github/actions/workflow/status/o/r/ci.yml.png?branch=main[/IMG][/URL], [IMG alt="data svg"]#harmful-link[/IMG].
+Images: [IMG alt="png"]https://example.com/image.png[/IMG], [IMG alt="svg"]https://images.weserv.nl/?url=https%3A%2F%2Fexample.com%2Flogo.svg&output=png[/IMG], [IMG alt="pixel art alt"]https://example.com/sprite.png[/IMG], [IMG]https://example.com/noalt.png[/IMG], [IMG alt="relative"]images/local.png[/IMG], [URL=https://github.com/o/r/actions][IMG alt="badge"]https://raster.shields.io/github/actions/workflow/status/o/r/ci.yml.png?branch=main[/IMG][/URL], [IMG alt="data svg"]#harmful-link[/IMG].
 
 Final paragraph.
 
 [B]Footnotes:[/B]
-[ANAME=fn-1]1[/ANAME]. First footnote.
+1. First footnote.
 
-[ANAME=fn-2]2[/ANAME]. Second footnote with [B]bold[/B].
+2. Second footnote with [B]bold[/B].
 

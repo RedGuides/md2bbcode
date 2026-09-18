@@ -1,6 +1,6 @@
 # uses a custom mistune renderer to convert Markdown to BBCode. The custom renderer is defined in the bbcode.py file.
-# pass --debug to save the output to readme.1stpass (main.py) and readme.finalpass (html2bbcode)
-# for further debugging, use md2ast to see how mistune reads the Markdown. It uses the same plugins as the BBCode converter.
+# HTML tags are parsed before rendering (plugins.py, html_tokens.py).
+# use md2ast to see what the renderer gets, for debugging.
 
 # standard library
 import argparse
@@ -22,10 +22,13 @@ from mistune.plugins.abbr import abbr
 from mistune.plugins.spoiler import spoiler
 
 # local
-from md2bbcode.dialect import DEFAULT_PRESET, Dialect, DialectError
-from md2bbcode.plugins.merge_lists import merge_ordered_lists
+from md2bbcode.dialect import Dialect, DialectError
+from md2bbcode.plugins import merge_ordered_lists, pair_html
 from md2bbcode.renderers.bbcode import BBCodeRenderer
 from md2bbcode.html2bbcode import process_html
+
+# Use a XenForo export from the current folder if present.
+LOCAL_BB_CODES = "bb_codes.xml"
 
 PLUGINS = [strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler, table_in_list, merge_ordered_lists]
 
@@ -42,26 +45,19 @@ def convert_markdown_to_bbcode(markdown_text, domain=None, link_base=None, image
 
 
 def convert_markdown_to_ast(markdown_text):
-    """Show how mistune reads the Markdown before turning it into BBCode, for debugging."""
+    """Show parsed Markdown and HTML before rendering, for debugging."""
     markdown_parser = mistune.create_markdown(renderer=None, plugins=PLUGINS)
-    return markdown_parser(markdown_text)
+    return pair_html(markdown_parser(markdown_text))
 
 
 def process_readme(markdown_text, domain=None, debug=False, link_base=None, image_base=None, dialect=None):
     """Convert Markdown and any HTML inside it to BBCode."""
-    # Convert Markdown to BBCode
-    bbcode_text = convert_markdown_to_bbcode(markdown_text, domain, link_base, image_base, dialect)
+    final_bbcode = convert_markdown_to_bbcode(markdown_text, domain, link_base, image_base, dialect)
 
-    # If debug mode, save intermediate BBCode
+    # Save the result for debugging.
     if debug:
-        with open('readme.1stpass', 'w', encoding='utf-8') as file:
-            file.write(bbcode_text)
-
-    # Convert BBCode formatted as HTML to final BBCode
-    final_bbcode = process_html(
-        bbcode_text, debug, 'readme.finalpass',
-        domain=domain, link_base=link_base, image_base=image_base, dialect=dialect,
-    )
+        with open('readme.finalpass', 'w', encoding='utf-8') as file:
+            file.write(final_bbcode)
 
     return final_bbcode
 
@@ -155,8 +151,10 @@ def _add_url_arguments(parser) -> None:
 
 
 def _add_dialect_arguments(parser) -> None:
-    parser.add_argument('--preset', metavar='NAME', help=f'Forum preset (default: {DEFAULT_PRESET})')
     parser.add_argument('--config', metavar='FILE', help='TOML file with custom tags (default: MD2BBCODE_CONFIG environment variable)')
+    custom = parser.add_mutually_exclusive_group()
+    custom.add_argument('--bb-codes', metavar='FILE', help="Your board's custom BB codes, exported from XenForo at admin.php?bb-codes (default: MD2BBCODE_BB_CODES environment variable, then the config, then a bb_codes.xml in the current folder, then the RedGuides set)")
+    custom.add_argument('--no-custom-bbcode', action='store_true', help='Use only the tags built into the forum software')
 
 
 def base_urls(args) -> dict:
@@ -179,10 +177,14 @@ def base_urls(args) -> dict:
 
 def load_dialect(args) -> Dialect:
     config = args.config or os.environ.get('MD2BBCODE_CONFIG')
+    # None leaves the choice to the config, then the folder, then the export we ship.
+    bb_codes = False if args.no_custom_bbcode else args.bb_codes or os.environ.get('MD2BBCODE_BB_CODES') or None
+    # Look for an export in the current folder.
+    found = LOCAL_BB_CODES if os.path.isfile(LOCAL_BB_CODES) else None
     try:
         if config:
-            return Dialect.load(config, preset=args.preset)
-        return Dialect.preset(args.preset or DEFAULT_PRESET)
+            return Dialect.load(config, bb_codes=bb_codes, default_bb_codes=found)
+        return Dialect.defaults(bb_codes=bb_codes, default_bb_codes=found)
     except DialectError as exc:
         raise CliError(str(exc)) from exc
 
@@ -205,7 +207,7 @@ def _md2bbcode(argv=None):
     _add_url_arguments(parser)
     _add_dialect_arguments(parser)
     parser.add_argument('--dump-config', action='store_true', help='Print the current settings as a reusable TOML config, then exit')
-    parser.add_argument('--debug', action='store_true', help='Save each conversion step to readme.1stpass and readme.finalpass for debugging')
+    parser.add_argument('--debug', action='store_true', help='Also save the result to readme.finalpass (use md2ast to see the tokens)')
     _add_version_argument(parser)
     args = parser.parse_args(argv)
 

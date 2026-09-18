@@ -2,7 +2,7 @@ import pytest
 
 
 def pytest_addoption(parser):
-    # Rewrites tests/fixtures/<case>.<preset>.bbcode from the current output.
+    # Rewrites tests/fixtures/<case>.<dialect>.bbcode from the current output.
     # Run as: hatch test -- --update-goldens
     parser.addoption(
         "--update-goldens",
