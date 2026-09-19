@@ -2,7 +2,6 @@
 
 import functools
 import os
-import re
 import string
 import tomllib
 from importlib import resources
@@ -26,8 +25,11 @@ TAGS = {
     "inline_spoiler": ("text",),
     "abbr": ("text", "title"),
     "link": ("text", "url"),
+    # link_anchor and anchor are a matching pair, used for footnotes.
     "link_anchor": ("text", "anchor"),
     "anchor": ("text", "name"),
+    # Links to a heading, which the forum software anchors itself.
+    "heading_link": ("text", "anchor"),
     "email": ("text", "address"),
     "font_color": ("text", "color"),
     "font_size": ("text", "size"),
@@ -43,7 +45,7 @@ TAGS = {
     "block_code_nolang": ("text",),
     "block_quote": ("text",),
     "block_quote_author": ("text", "author"),
-    # {kind} is "tip" and {label} is "Tip".
+    # For `> [!WARNING]`, {kind} is "warning" and {label} is "Warning".
     "admonition": ("text", "kind", "label"),
     "block_spoiler": ("text", "title"),
     "block_spoiler_notitle": ("text",),
@@ -82,11 +84,29 @@ UNKNOWN_HTML = ("keep", "strip")
 # Letter case for imported custom tags.
 TAG_CASES = ("upper", "lower")
 
-_TOP_LEVEL_KEYS = {"name", "paragraph_separator", "unknown_html", "tag_case", "bb_codes", "tags"}
+# How a "#section" link finds its heading.
+HEADING_ANCHORS = ("xenforo", "none")
+
+_TOP_LEVEL_KEYS = {"paragraph_separator", "unknown_html", "tag_case", "heading_anchors", "bb_codes", "tags"}
 
 
 class DialectError(ValueError):
     """A config error that names the bad setting."""
+
+
+def _check_choice(setting: str, value, choices, source: str) -> None:
+    if value not in choices:
+        listed = " or ".join(f'"{choice}"' for choice in choices)
+        raise DialectError(f"{source}: {setting} must be {listed}")
+
+
+def _placeholders(template: str) -> set:
+    """Return the placeholder names used by a template."""
+    names = set()
+    for _literal, field, _spec, _conversion in string.Formatter().parse(template):
+        if field is not None:
+            names.add(field)
+    return names
 
 
 def _check_template(key: str, template, source: str) -> None:
@@ -127,25 +147,22 @@ def _toml_string(value: str) -> str:
 
 
 class Dialect:
+    """BBCode templates and settings, checked at construction so config errors fail before rendering."""
+
     def __init__(
         self,
-        name: str,
         tags: dict,
         paragraph_separator: str = "\n\n",
         unknown_html: str = "keep",
         tag_case: str = "upper",
+        heading_anchors: str = "xenforo",
         source: str = "dialect",
     ) -> None:
-        if not isinstance(name, str) or not name:
-            raise DialectError(f"{source}: name must be non-empty text")
         if not isinstance(paragraph_separator, str):
             raise DialectError(f"{source}: paragraph_separator must be text")
-        if unknown_html not in UNKNOWN_HTML:
-            choices = " or ".join(f'"{choice}"' for choice in UNKNOWN_HTML)
-            raise DialectError(f"{source}: unknown_html must be {choices}")
-        if tag_case not in TAG_CASES:
-            choices = " or ".join(f'"{choice}"' for choice in TAG_CASES)
-            raise DialectError(f"{source}: tag_case must be {choices}")
+        _check_choice("unknown_html", unknown_html, UNKNOWN_HTML, source)
+        _check_choice("tag_case", tag_case, TAG_CASES, source)
+        _check_choice("heading_anchors", heading_anchors, HEADING_ANCHORS, source)
 
         unknown = sorted(set(tags) - set(TAGS))
         if unknown:
@@ -158,22 +175,24 @@ class Dialect:
             if key != "heading":
                 _check_template(key, template, source)
 
-        self.name = name
         self.paragraph_separator = paragraph_separator
         self.unknown_html = unknown_html
         self.tag_case = tag_case
+        self.heading_anchors = heading_anchors
         self.tags = {key: tags[key] for key in TAGS if key != "heading"}
         self.headings = self._check_headings(tags["heading"], source)
         # Footnote links need matching anchors.
-        self.has_anchors = any(field == "name" for _, field, _, _ in string.Formatter().parse(self.tags["anchor"]))
+        self.has_anchors = "name" in _placeholders(self.tags["anchor"])
 
     @staticmethod
     def _check_headings(headings, source: str) -> dict:
         if not isinstance(headings, dict) or not headings:
             raise DialectError(f"{source}: tags.heading must list levels, like {{ 1 = \"[h1]{{text}}[/h1]\" }}")
+        # TOML gives the levels as text ("1"); a dict built in Python may use numbers.
+        allowed_levels = {str(number) for number in HEADING_LEVELS}
         checked = {}
         for level, template in headings.items():
-            if str(level) not in {str(n) for n in HEADING_LEVELS}:
+            if str(level) not in allowed_levels:
                 raise DialectError(f"{source}: tags.heading.{level}: level must be 1 to 6")
             _check_template(f"heading.{level}", template, source)
             checked[int(level)] = template
@@ -186,18 +205,19 @@ class Dialect:
 
     def heading(self, level: int, text: str) -> str:
         # Missing levels use the nearest lower number, e.g. level 4 uses 3.
-        level = max(n for n in self.headings if n <= max(level, 1))
-        return self.headings[level].format(text=text)
+        available = [number for number in self.headings if number <= max(level, 1)]
+        return self.headings[max(available)].format(text=text)
 
     def to_toml(self) -> str:
         lines = [
             "# Custom BBCode tags; use this file with --config.",
             "# Use \"{text}\" to drop a tag but keep its content.",
-            f"name = {_toml_string(self.name)}",
             f"paragraph_separator = {_toml_string(self.paragraph_separator)}",
             "# HTML that has no BBCode: \"keep\" it as written or \"strip\" the tags.",
             f"unknown_html = {_toml_string(self.unknown_html)}",
             f"tag_case = {_toml_string(self.tag_case)}",
+            '# Point "#section" links at the forum\'s own heading anchors, or "none" to leave them alone.',
+            f"heading_anchors = {_toml_string(self.heading_anchors)}",
             "",
             "[tags]",
         ]
@@ -213,13 +233,11 @@ class Dialect:
 
     @classmethod
     def defaults(cls, bb_codes=None, default_bb_codes=None) -> "Dialect":
-        """The built-in tags. ``bb_codes`` is an export to read custom tags from, False for none."""
+        """Load built-in tags, using ``bb_codes`` for a custom export or False to disable custom tags."""
         if default_bb_codes is None and (bb_codes is None or bb_codes is False):
+            # Only bundled files are used here, so these defaults can be cached.
             return _default_dialect(bb_codes)
-        return cls.from_dict(
-            {}, source="settings", default_name=None,
-            bb_codes=bb_codes, default_bb_codes=default_bb_codes,
-        )
+        return cls.from_dict({}, source="settings", bb_codes=bb_codes, default_bb_codes=default_bb_codes)
 
     @classmethod
     def load(cls, path, bb_codes=None, default_bb_codes=None) -> "Dialect":
@@ -235,9 +253,8 @@ class Dialect:
         except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
             raise DialectError(f"{path}: not valid TOML: {exc}") from exc
 
-        default_name = os.path.splitext(os.path.basename(path))[0]
         return cls.from_dict(
-            data, source=path, default_name=default_name,
+            data, source=path,
             bb_codes=bb_codes, default_bb_codes=default_bb_codes, base_dir=os.path.dirname(path),
         )
 
@@ -246,10 +263,9 @@ class Dialect:
         cls,
         data: dict,
         source: str = "dialect",
-        default_name: str = "custom",
         bb_codes=None,
         default_bb_codes=None,
-        base_dir: str = None,
+        base_dir: str | None = None,
     ) -> "Dialect":
         """Merge tags in order: the built-in ones, the board's BB codes, then config overrides."""
         unknown = sorted(set(data) - _TOP_LEVEL_KEYS)
@@ -262,47 +278,52 @@ class Dialect:
         base, bundled_codes = _load_defaults()
         tag_case = data.get("tag_case", base.tag_case)
 
-        if bb_codes is None and "bb_codes" in data:
-            bb_codes = data["bb_codes"]
-            if bb_codes is not False and not isinstance(bb_codes, str):
-                raise DialectError(f"{source}: bb_codes must be the path of a bb_codes.xml, or false for no custom tags")
-            if bb_codes and base_dir:
-                # Resolve export paths relative to the config file.
-                bb_codes = os.path.join(base_dir, bb_codes)
+        # bb_codes is a path, False for no custom tags, or None for "not chosen yet".
+        # Precedence: caller, config, default_bb_codes, then the bundled export.
         if bb_codes is None:
-            # Nobody chose one: an export the caller came across, else the one we ship.
+            bb_codes = _config_bb_codes(data, source, base_dir)
+        if bb_codes is None:
             bb_codes = default_bb_codes
+
+        upper = tag_case == "upper"
         if bb_codes is None:
-            custom = _bundled_custom_tags(bundled_codes, tag_case == "upper") if bundled_codes else {}
+            custom = _bundled_custom_tags(bundled_codes, upper) if bundled_codes else {}
+        elif bb_codes:
+            custom = _custom_tags(os.fspath(bb_codes), upper)
         else:
-            custom = _custom_tags(os.fspath(bb_codes), tag_case == "upper") if bb_codes else {}
+            # False, or an empty path: no custom tags.
+            custom = {}
 
         merged = {**base.tags, "heading": dict(base.headings), **custom, **tags}
         if isinstance(tags.get("heading"), dict):
-            # Keep heading levels not changed by the config.
-            merged["heading"] = {**{str(level): t for level, t in base.headings.items()}, **tags["heading"]}
+            # Keep heading levels not changed by the config. TOML keys are text, so ours become text too.
+            levels = {}
+            for level, template in base.headings.items():
+                levels[str(level)] = template
+            levels.update(tags["heading"])
+            merged["heading"] = levels
 
         return cls(
-            name=data.get("name") or default_name or base.name,
             tags=merged,
             paragraph_separator=data.get("paragraph_separator", base.paragraph_separator),
             unknown_html=data.get("unknown_html", base.unknown_html),
             tag_case=tag_case,
+            heading_anchors=data.get("heading_anchors", base.heading_anchors),
             source=source,
         )
 
 
 @functools.cache
 def _load_defaults():
-    """Read the built-in tags and the name of the export shipped with them."""
+    """Read the built-in tags, and which BB code export ships with them."""
     data = tomllib.loads((resources.files("md2bbcode") / "dialects" / DEFAULTS_FILE).read_text(encoding="utf-8"))
-    # The built-in file must define every tag.
+    # The built-in file must define every setting and every tag.
     dialect = Dialect(
-        name=data.get("name", "xenforo"),
-        tags=data.get("tags", {}),
-        paragraph_separator=data.get("paragraph_separator", "\n\n"),
-        unknown_html=data.get("unknown_html", "keep"),
-        tag_case=data.get("tag_case", "upper"),
+        tags=data["tags"],
+        paragraph_separator=data["paragraph_separator"],
+        unknown_html=data["unknown_html"],
+        tag_case=data["tag_case"],
+        heading_anchors=data["heading_anchors"],
         source=DEFAULTS_FILE,
     )
     return dialect, data.get("bb_codes") or None
@@ -310,7 +331,22 @@ def _load_defaults():
 
 @functools.cache
 def _default_dialect(bb_codes) -> Dialect:
-    return Dialect.from_dict({}, source="settings", default_name=None, bb_codes=bb_codes)
+    return Dialect.from_dict({}, source="settings", bb_codes=bb_codes)
+
+
+def _config_bb_codes(data: dict, source: str, base_dir: str | None):
+    """The export a config names: a path, False for none, or None if it does not say."""
+    if "bb_codes" not in data:
+        return None
+    value = data["bb_codes"]
+    if value is False:
+        return False
+    if not isinstance(value, str):
+        raise DialectError(f"{source}: bb_codes must be the path of a bb_codes.xml, or false for no custom tags")
+    if value and base_dir:
+        # Resolve export paths relative to the config file.
+        return os.path.join(base_dir, value)
+    return value
 
 
 @functools.cache
@@ -332,7 +368,7 @@ def _custom_tags(path: str, upper: bool) -> dict:
 
 
 def get_dialect(dialect=None) -> Dialect:
-    """Accept a Dialect, or None for the built-in tags."""
+    """Return a Dialect, using default tags and bundled custom BB codes for None."""
     if dialect is None:
         return Dialect.defaults()
     if not isinstance(dialect, Dialect):

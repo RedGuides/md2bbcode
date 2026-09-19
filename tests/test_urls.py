@@ -2,9 +2,9 @@
 
 import pytest
 
-from md2bbcode import process_readme
-from md2bbcode.html2bbcode import html_to_bbcode
-from md2bbcode.renderers.bbcode import resolve_bases, resolve_url
+from md2bbcode import convert
+from md2bbcode import html_to_bbcode
+from md2bbcode.renderer import resolve_bases, resolve_url
 
 LINK_BASE = "https://github.com/o/r/blob/main/docs/"
 IMAGE_BASE = "https://raw.githubusercontent.com/o/r/main/docs/"
@@ -77,15 +77,15 @@ BASE_CASES = {
 def test_markdown_and_html_use_the_link_base_for_links_and_the_image_base_for_images(case):
     bases, link, image = BASE_CASES[case]
 
-    markdown = process_readme("[g](guide.md) ![l](logo.png)", **bases)
-    assert markdown == f'[URL={link}]g[/URL] [IMG alt="l"]{image}[/IMG]\n\n'
+    markdown = convert("[g](guide.md) ![l](logo.png)", **bases)
+    assert markdown == f'[URL={link}]g[/URL] [IMG alt="l"]{image}[/IMG]\n'
 
     html = html_to_bbcode('<a href="guide.md">g</a> <img src="logo.png" alt="l">', **bases)
     assert html == f'[URL={link}]g[/URL] [IMG alt="l"]{image}[/IMG]'
 
     # Also check HTML inside Markdown.
-    mixed = process_readme('See <a href="guide.md">g</a> <img src="logo.png" alt="l">.', **bases)
-    assert mixed == "See " + html + ".\n\n"
+    mixed = convert('See <a href="guide.md">g</a> <img src="logo.png" alt="l">.', **bases)
+    assert mixed == "See " + html + ".\n"
 
 
 @pytest.mark.parametrize("url, expected", RULES)
@@ -100,8 +100,10 @@ def test_every_rule_holds_for_all_four_kinds_of_url(url, expected):
         assert html_to_bbcode(f'<a href="{url}">t</a>', **bases) == f"[URL={link}]t[/URL]"
 
     if url == url.strip() and "(" not in url:
-        assert process_readme(f"[t](<{url}>)", **bases) == f"[URL={link}]t[/URL]\n\n"
-        assert process_readme(f"![](<{url}>)", **bases) == f"[IMG]{image}[/IMG]\n\n"
+        if not url.startswith("#"):
+            # A Markdown "#section" link uses [JUMPTO] as well.
+            assert convert(f"[t](<{url}>)", **bases) == f"[URL={link}]t[/URL]\n"
+        assert convert(f"![](<{url}>)", **bases) == f"[IMG]{image}[/IMG]\n"
 
 
 @pytest.mark.parametrize("url", ["https://[::1", "http://[oops", "https://exa]mple.com/"])
@@ -115,5 +117,5 @@ def test_a_url_urlparse_rejects_is_left_alone_instead_of_crashing(url):
 
 
 def test_markdown_anchor_link_is_not_joined_to_the_base():
-    result = process_readme("[top](#getting-started)", domain="https://github.com/o/r/blob/main/")
-    assert result == "[URL=#getting-started]top[/URL]\n\n"
+    result = convert("[top](#getting-started)", domain="https://github.com/o/r/blob/main/")
+    assert result == "[JUMPTO=getting-started]top[/JUMPTO]\n"

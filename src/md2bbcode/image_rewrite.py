@@ -1,11 +1,15 @@
-from typing import Optional
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 _RASTER_SHIELDS_BASE = "https://raster.shields.io"
 _WESERV_BASE = "https://images.weserv.nl/"
 
 
-def rewrite_svg_url(url: str) -> Optional[str]:
+def rewrite_svg_url(url: str) -> str | None:
+    """Point an SVG image at a service that serves it as a PNG, which XenForo can show.
+
+    Other URLs come back unchanged. None means an SVG we cannot convert, so the
+    caller should link to it instead.
+    """
     if not url:
         return url
 
@@ -32,6 +36,7 @@ def _is_github_actions_badge(parsed) -> bool:
     if parsed.netloc.lower() != "github.com":
         return False
 
+    # github.com/<owner>/<repo>/actions/workflows/<workflow file>/badge.svg
     parts = parsed.path.strip("/").split("/")
     return (
         len(parts) >= 6
@@ -61,10 +66,7 @@ def _rewrite_github_actions_badge(parsed) -> str:
 
 
 def _should_rasterize(parsed) -> bool:
-    path = parsed.path.lower()
-    if path.endswith(".svg"):
-        return True
-    return False
+    return parsed.path.lower().endswith(".svg")
 
 
 def _wrap_weserv(url: str) -> str:

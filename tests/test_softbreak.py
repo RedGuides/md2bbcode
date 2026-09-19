@@ -1,4 +1,4 @@
-from md2bbcode.main import process_readme
+from md2bbcode.main import convert
 
 
 def test_hard_wrapped_paragraph_keeps_word_separation():
@@ -9,7 +9,7 @@ characters without a space at
 the end, like this text ...
 """.lstrip()
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
     assert "paragraph that is formatted" in result
     assert "specific length" in result
@@ -26,7 +26,7 @@ Second paragraph
 wrapped here.
 """.lstrip()
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
     assert "First paragraph wrapped here." in result
     assert "Second paragraph wrapped here." in result
@@ -42,7 +42,7 @@ code line 2
 ```
 """.lstrip()
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
     assert "code line 1\ncode line 2" in result
     assert "code line 1 code line 2" not in result
@@ -52,7 +52,7 @@ def test_hard_break_still_emits_a_line_break():
     # Hard break stays a break.
     markdown = "before the break  \nafter the break\n"
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
     assert "before the break\nafter the break" in result
     assert "before the break after the break" not in result
@@ -66,7 +66,7 @@ def test_wrapped_list_items_and_blockquotes_keep_separation():
 > hard wrapped
 """.lstrip()
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
     assert "a list item that is hard wrapped too" in result
     assert "a blockquote that is hard wrapped" in result
@@ -76,7 +76,7 @@ def test_wrapped_list_items_and_blockquotes_keep_separation():
 def test_softbreak_does_not_introduce_double_spaces():
     markdown = "one trailing space \nnext line\n"
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
     assert "one trailing space next line" in result
     assert "space  next" not in result

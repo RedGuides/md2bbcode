@@ -1,5 +1,5 @@
-from md2bbcode.main import process_readme
-from md2bbcode.html2bbcode import html_to_bbcode
+from md2bbcode.main import convert
+from md2bbcode import html_to_bbcode
 
 
 def test_html_basic_formatting_and_links():
@@ -10,7 +10,7 @@ def test_html_basic_formatting_and_links():
         "<img src=\"https://example.com/x.png\" alt=\"alt text\">"
         "<hr>"
     )
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[b]bold[/b]" in lowered
@@ -30,7 +30,7 @@ def test_html_code_blocks_and_inline_code():
         "<pre><code class=\"language-python\">print('hi')</code></pre>"
         " and <code>inline</code>"
     )
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[code=python]print('hi')[/code]" in lowered
@@ -46,7 +46,7 @@ def test_html_lists_and_tables():
         "<tr><td>A</td><td>B</td></tr>"
         "</table>"
     )
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[list]" in lowered
@@ -67,12 +67,12 @@ def test_html_anchor_and_abbr():
         "<a href=\"#section\">Jump</a> "
         "<abbr title=\"World Health Organization\">WHO</abbr>"
     )
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[aname=section]target[/aname]" in lowered
     assert "[jumpto=section]jump[/jumpto]" in lowered
-    assert "[abbr=world health organization]who[/abbr]" in lowered
+    assert '[abbr="world health organization"]who[/abbr]' in lowered
 
 
 def test_html_mailto_and_alignment():
@@ -82,7 +82,7 @@ def test_html_mailto_and_alignment():
         "<div align=\"right\"><b>Right</b></div>"
         "<blockquote data-author=\"Alice\">Quoted</blockquote>"
     )
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[email]test@example.com[/email]" in lowered
@@ -94,7 +94,7 @@ def test_html_mailto_and_alignment():
 
 def test_span_and_div_without_style_convert_children():
     markdown = "<span><b>Bold</b></span><div><i>Italic</i></div>"
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[b]bold[/b]" in lowered
@@ -106,9 +106,9 @@ def test_span_and_div_without_style_convert_children():
 def test_unknown_html_passthrough():
     # The tag we do not know stays as written; what is inside it is still converted.
     markdown = "<custom-tag data-x=\"1\"><b>Bold</b></custom-tag>"
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
-    assert result == "<custom-tag data-x=\"1\">[B]Bold[/B]</custom-tag>\n\n"
+    assert result == "<custom-tag data-x=\"1\">[B]Bold[/B]</custom-tag>\n"
 
 
 def test_video_and_audio_become_a_link_to_the_file():
@@ -118,18 +118,18 @@ def test_video_and_audio_become_a_link_to_the_file():
         '<video src="demo.mp4" controls>Your browser cannot play this.</video>\n\n'
         '<audio src="https://example.com/clip.ogg"></audio>\n'
     )
-    assert process_readme(markdown, domain="https://example.com/r/") == (
+    assert convert(markdown, domain="https://example.com/r/") == (
         "[URL=https://example.com/r/demo.mp4]demo.mp4[/URL]\n\n"
-        "[URL=https://example.com/clip.ogg]https://example.com/clip.ogg[/URL]\n\n"
+        "[URL=https://example.com/clip.ogg]https://example.com/clip.ogg[/URL]\n"
     )
 
 
 def test_a_video_built_from_source_children_stays_as_written():
     # There is no src to link to without picking one of the sources, so leave it alone.
     markdown = '<video controls><source src="a.mp4" type="video/mp4">Fallback.</video>'
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
-    assert result == '<video controls><source src="a.mp4" type="video/mp4">Fallback.</video>\n\n'
+    assert result == '<video controls><source src="a.mp4" type="video/mp4">Fallback.</video>\n'
 
 
 def test_standalone_html_comment_is_dropped():
@@ -142,7 +142,7 @@ def test_standalone_html_comment_is_dropped():
         "<!-- END GENERATED CLI REFERENCE -->\n\n"
         "After"
     )
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
 
     assert "<!--" not in result
     assert "GENERATED CLI REFERENCE" not in result
@@ -160,3 +160,24 @@ def test_comment_nested_in_html_block_is_dropped():
     assert "<!--" not in result
     assert "hidden note" not in result
     assert "[B]Visible[/B]" in result
+
+
+def test_html_headings_convert_like_markdown_headings():
+    assert convert("<h1>Title</h1>\n\ntext\n") == convert("# Title\n\ntext\n") == "[HEADING=1]Title[/HEADING]\ntext\n"
+    assert convert("<h2>Sub <b>bold</b></h2>\n") == "[HEADING=2]Sub [B]bold[/B][/HEADING]\n"
+    assert convert('<h2 style="color:red">Red</h2>\n') == "[HEADING=2][COLOR=red]Red[/COLOR][/HEADING]\n"
+    # A level the board lacks falls back the way ##### does.
+    assert convert("<h5>Five</h5>\n") == convert("##### Five\n") == "[HEADING=3]Five[/HEADING]\n"
+    assert html_to_bbcode("<h1>Title</h1><p>text</p>") == "[HEADING=1]Title[/HEADING]\ntext"
+
+
+def test_an_aligned_html_heading_is_wrapped_in_the_alignment():
+    # The most common HTML in a README: a centered title, often with a logo above it.
+    assert convert('<h1 align="center">Project</h1>\n\ntext\n') == "[CENTER][HEADING=1]Project[/HEADING][/CENTER]\n\ntext\n"
+    logo = '<h1 align="center">\n  <img src="logo.png" alt="logo">\n  <br>\n  Project\n</h1>\n'
+    assert convert(logo) == '[CENTER][HEADING=1][IMG alt="logo"]logo.png[/IMG]\nProject[/HEADING][/CENTER]\n'
+
+
+def test_an_html_heading_ends_an_open_paragraph_and_an_unclosed_one_stays_as_written():
+    assert convert("<p>para<h3>Head</h3>\n") == "para\n[HEADING=3]Head[/HEADING]\n"
+    assert convert("<h2>never closed\n\ntext\n") == "<h2>never closed\n\ntext\n"

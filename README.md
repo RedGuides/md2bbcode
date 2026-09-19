@@ -5,9 +5,6 @@
 # md2bbcode
 **A wrapper and plugin for [Mistune](https://github.com/lepture/mistune).** It converts most GitHub-flavored Markdown to Xenforo-flavored BBCode. 
 
-> [!TIP]
-> Custom BBCodes made for RedGuides are included in [`bb_codes.xml`](src/md2bbcode/dialects/bb_codes.xml), import the ones you want in your Xenforo installation at `admin.php?bb-codes`. Some custom BBCodes include css, which you can split off to your extra.css template for more efficiency. Running a different board? [Give md2bbcode your own export](#your-boards-custom-bb-codes).
-
 > [!NOTE]  
 > This project is made with LLM assistance (derogatory).
 
@@ -33,182 +30,199 @@ Output prints to stdout as UTF-8. To write straight to a file (recommended on Wi
 md2bbcode README.md -o output.bbcode
 ```
 
-For relative links and images, set their base URLs. GitHub needs `blob` URLs for links and raw URLs for images:
+### Relative paths
+
+Use `--domain` to turn relative links and image paths, such as `guide.md` and `images/logo.png`, into full URLs:
+
+```bash
+md2bbcode README.md --domain https://example.com/docs/
+```
+
+For GitHub, use the repo URL. This assumes you use the default branch:
+
+```bash
+md2bbcode README.md --domain https://github.com/RedGuides/md2bbcode
+```
+
+<details>
+<summary>Advanced URL options</summary>
+
+For a different GitHub branch or a README in a subfolder, pass that folder's GitHub URL to `--domain`, for example `https://github.com/RedGuides/md2bbcode/tree/dev/docs`.
+
+For other sites, `--domain` uses the same base URL for links and images. To set separate base URLs, use `--link-base` and `--image-base`:
 
 ```bash
 md2bbcode README.md --link-base https://github.com/RedGuides/md2bbcode/blob/main/ --image-base https://raw.githubusercontent.com/RedGuides/md2bbcode/main/
 ```
 
-`--domain URL` sets both bases. If only one base is given, links and images share it. Full URLs, `//host/path` and `#anchor` links stay unchanged.
+Full URLs and URLs starting with `//host/path` are left unchanged.
+
+</details>
 
 ### Your board's custom BB codes
 
-XenForo has no built-in tag for highlights, superscript, subscript, abbreviations, anchors or GitHub-style admonitions, so md2bbcode writes those with custom BB codes. By default it assumes your board has the RedGuides set. If it has its own, export them at `admin.php?bb-codes` and hand over the file:
+XenForo has no built-in tag for highlights, superscript, subscript, abbreviations, anchors, and others, so md2bbcode writes those with custom BB codes. By default it assumes your board has the RedGuides set of custom BB codes.
+
+> [!TIP]
+> The RedGuides custom BB codes are packaged for import in [bb_codes.xml](src/md2bbcode/dialects/bb_codes.xml). Import the ones you want into XenForo at `admin.php?bb-codes`. Some include CSS, which you can move to your extra.css template for more efficiency.
+
+If your board has its own custom BB codes, export them at `admin.php?bb-codes` and hand over the file:
 
 ```bash
 md2bbcode README.md --bb-codes bb_codes.xml
 ```
 
-md2bbcode reads what each BB code does, not what it is called: if your board turns `[highlight]` into `<mark>{text}</mark>`, then `==text==` becomes `[HIGHLIGHT]text[/HIGHLIGHT]`. Anything your board lacks is written with built-in tags instead, so nothing shows up as literal `[MARK]` in a post.
+md2bbcode checks the HTML each BB code produces to find the right tag for your board. For example, if `[highlight]` produces `<mark>{text}</mark>`, then `==text==` becomes `[HIGHLIGHT]text[/HIGHLIGHT]`. Some common tag names are recognised too.
 
-| Markdown or HTML | Found in your export by | Without it |
-| --- | --- | --- |
-| `==highlight==`, `<mark>` | `<mark>{text}</mark>`, or the name `mark` | plain text |
-| `<sup>`, `<sub>`, footnote numbers | `<sup>{text}</sup>`, `<sub>{text}</sub>`, or the names `sup`, `sub` | plain text |
-| abbreviations, `<abbr>` | `<abbr title="{option}">{text}</abbr>`, or the name `abbr` | plain text |
-| `<a href="#x">`, footnote links | `<a href="#{option}">{text}</a>` | `[URL=#x]`, which works on any Xenforo |
-| `<a name="x">`, footnote targets | `<a name="{option}">{text}</a>` (or `id`) | plain text, and footnote numbers stop linking, since there is nothing to land on |
-| `> [!NOTE]` alerts | the name `admonition`, with an option | a quote that starts with **Note:** |
-| images with alt text starting "pixel" | the name `pixelate` | a normal image |
+If your board has no matching BB code, md2bbcode uses a simpler alternative, such as plain text, inline code, or a quote.
 
-For a board with no custom BB codes at all, use `--no-custom-bbcode`. To check what was picked up, add `--dump-config`.
-
-Some things have no BBCode of their own and are put together from the tags above. A footnote number is superscript and links to its footnote; an alert is an `[admonition]`. How they are put together is a line each in your config (next section), where you can also name a BB code md2bbcode did not recognise:
-
-```toml
-bb_codes = "bb_codes.xml"
-
-[tags]
-admonition    = "[ALERT={kind}]{text}[/ALERT]"   # {kind} is "note", {label} is "Note"
-footnote_ref  = "[U]{link}[/U]"                   # {link} is the number, linked if your board has anchors
-footnote_item = "{target}. {text}"                # {target} is the number, as the anchor the link lands on
-```
+Use `--no-custom-bbcode` if your board has only default Xenforo bbcode.
 
 ### Changing a tag
 
-Every tag md2bbcode writes is a setting in a TOML file of your own. Write the current ones out, edit, and pass it back:
-
-```bash
-md2bbcode --dump-config -o myboard.toml
-md2bbcode README.md --config myboard.toml
-```
-
-Your file only needs the lines that differ, so this is a complete config:
+Put the settings you want to change in a TOML file, such as `myboard.toml`. This example changes inline code to `[CODE]` and turns off highlighting:
 
 ```toml
 [tags]
-codespan = "[code]{text}[/code]"
+codespan = "[CODE]{text}[/CODE]"
+mark = "{text}"
 ```
 
-`{text}` keeps the content inside a tag. Use `"{text}"` alone to remove the tag. The config covers HTML in your Markdown too, since it is converted with the same tags.
+`{text}` keeps the content. Using it alone removes the surrounding tag, so `==highlighted text==` becomes plain text. These settings apply to HTML in your Markdown too.
 
-You can also use env vars, `MD2BBCODE_CONFIG` and `MD2BBCODE_BB_CODES` in place of `--config` and `--bb-codes`.
+Apply your config with `--config`:
 
-`<video>` and `<audio>` become a link to the file. XenForo plays media only through attachments and its media sites, and a README can address neither, so a link is the closest it gets.
+```bash
+md2bbcode README.md --config myboard.toml
+```
 
-Other HTML that has no BBCode, such as `<iframe>`, is kept as written. To remove those tags and keep their content, add this to the top of your config:
+To find other tag names and see their current settings, use `--dump-config`:
+
+```bash
+md2bbcode --dump-config
+```
+
+<details>
+<summary>More config options</summary>
+
+Your config only needs the settings you want to override. Add `-o myboard.toml` to the dump command to start from a full config, or `--bb-codes bb_codes.xml` to inspect the tags detected from your board's export.
+
+To remove unsupported HTML tags instead of keeping them, add this **above** `[tags]`. Their content is kept:
 
 ```toml
 unknown_html = "strip"
 ```
 
+A config can also name your board's export, so you don't need `--bb-codes` each time. The path is relative to the config file:
+
+```toml
+bb_codes = "bb_codes.xml"
+```
+
+You can use the environment variables `MD2BBCODE_CONFIG` and `MD2BBCODE_BB_CODES` instead of `--config` and `--bb-codes`.
+
+</details>
+
+<details>
+<summary>Admonitions and footnotes</summary>
+
+Your config can specify BB codes that md2bbcode did not recognise, or change how tags are combined. For example, a footnote reference can include both superscript formatting and a link to the footnote.
+
+If your board has an `[ALERT]` BB code, this config uses it for GitHub alerts. It also shows how to underline footnote references and put a period after each footnote number:
+
+```toml
+bb_codes = "bb_codes.xml"
+
+[tags]
+admonition    = "[ALERT={kind}]{text}[/ALERT]"
+footnote_ref  = "[U]{link}[/U]"
+footnote_item = "{target}. {text}"
+```
+
+md2bbcode fills in these placeholders:
+
+- `{kind}` is the alert type, such as `warning`. `{label}` is also available for the display name, such as `Warning`.
+- `{link}` is the footnote reference number, linked when your board supports anchors.
+- `{target}` is the number beside the footnote, with an anchor when supported.
+- `{text}` is the content of the alert or footnote.
+
+</details>
+
+### HTML files
+
+md2bbcode also installs `html2bbcode`, which converts an HTML file the same way md2bbcode converts the HTML inside Markdown. It takes the same `-o`, `--domain`, `--config` and `--bb-codes` options:
+
+```bash
+html2bbcode page.html -o output.bbcode
+```
+
+### Use in Python
+
 You can also use the package in your Python project:
 
 ```python
-from md2bbcode import process_readme
+from md2bbcode import convert
 
-bbcode = process_readme("# Hell World")
+bbcode = convert("# Hell World")
 print(bbcode)
 ```
 
-Set `link_base` and `image_base` for relative URLs, or `domain` for both:
+Use `domain` for relative links and images, with the same automatic GitHub handling as the CLI:
 
 ```python
-bbcode = process_readme(
+bbcode = convert(
     markdown_text,
-    link_base="https://github.com/yourusername/yourrepo/blob/main/",
-    image_base="https://raw.githubusercontent.com/yourusername/yourrepo/main/",
+    domain="https://github.com/yourusername/yourrepo",
 )
 ```
 
-Pass a custom config as `dialect`:
+<details>
+<summary>Custom BB code in python</summary>
+
+Use `Dialect` to apply a TOML config:
 
 ```python
-from md2bbcode import Dialect, process_readme
+from md2bbcode import Dialect, convert
 
-bbcode = process_readme(markdown_text, dialect=Dialect.load("myboard.toml"))
+bbcode = convert(markdown_text, dialect=Dialect.load("myboard.toml"))
 ```
 
 Or just your board's BB code export (`bb_codes=False` for a board with none):
 
 ```python
-bbcode = process_readme(markdown_text, dialect=Dialect.defaults(bb_codes="bb_codes.xml"))
+bbcode = convert(markdown_text, dialect=Dialect.defaults(bb_codes="bb_codes.xml"))
 ```
+</details>
 
-### Debug Mode
-
-To see how your Markdown and HTML were read, use [md2ast](#md2ast). The `--debug` flag also saves the result to `readme.finalpass`:
-
-```bash
-md2bbcode README.md --debug
-```
 ## Development
 
-If you want to contribute to md2bbcode or set up a development environment, follow these steps:
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/RedGuides/md2bbcode.git
-   cd md2bbcode
-   ```
-
-2. Create a development environment and install dependencies:
-   ```bash
-   hatch env create
-   ```
-
-3. Activate the development environment:
-   ```bash
-   hatch shell
-   ```
-
-### renderers/bbcode.py
-
-The custom plugin for Mistune, which converts AST to bbcode.[^1]
-
-[^1]: Mistune does not convert Markdown HTML to AST, so `plugins.py` and `html_tokens.py` do that first.
-
-## Additional Tools
-
-### html2bbcode
-
-Converts most HTML tags typically allowed in Github Flavored Markdown to BBCode.[^2]
-
-[^2]: It converts HTML the same way `md2bbcode` converts the HTML inside Markdown. Reference: https://github.github.com/gfm/#raw-html
+You need [Hatch](https://hatch.pypa.io), which you can install with `pipx install hatch`. Then clone the repository and run the tests:
 
 ```bash
-html2bbcode input_file.html
+git clone https://github.com/RedGuides/md2bbcode.git
+cd md2bbcode
+hatch test
 ```
-
-### md2ast
-
-For debugging, converts a Markdown file to the AST (JSON format) that the BBCode renderer works from, with HTML already turned into tokens.
-
-```bash
-md2ast input.md output.json
-```
-
-## Features Test
-
-Here are a few GitHub-flavored Markdown features so you can use this README.md for testing, including the table:
-
-  | Feature       | Markdown        | Rendered        |
-  | :------------ | :-------------: | ---------------:|
-  | Bold         | `**text**`      | **bold**        |
-  | Italic       | `*text*`        | *italic*        |
-  | Strikethrough| `~~text~~`      | ~~struck~~      |
-  | Code         | `` `code` ``    | `inline`        |
-  | Link         | `[text](url)`   | [example](https://example.com) |
-  | Superscript  | `<sup>2</sup>`  | E=mc<sup>2</sup> |
-  | Subscript    | `<sub>2</sub>`  | H<sub>2</sub>O  |
 
 <details>
-<summary>HTML spoiler (details/summary)</summary>
+<summary>How the code fits together</summary>
 
-<b>html2bbcode</b> test. This is hidden content. Water is H<sub>2</sub>O.
+- `main.py` has the commands and `convert()`.
+- `plugins.py` and `html_tokens.py` turn the HTML inside Markdown into tokens, because Mistune does not.
+- `renderer.py` is the Mistune renderer that turns the tokens into BBCode.
+- `dialect.py` holds the tag settings, which start from `dialects/xenforo.toml`. `bb_codes.py` reads a board's BB code export.
+- `image_rewrite.py` points SVG images at a service that serves them as PNG, which XenForo can show.
 
-<font color="red" size="3" face="Arial">Font tag inside details size 3 Arial red</font>
+Each Markdown file in `tests/fixtures` has its expected BBCode saved beside it. After a change that is meant to alter the output, update the saved files and check the diff:
 
-<span style="color: #27F573; font-size: 12px; font-family: Times New Roman; font-weight: bold; font-style: italic; text-decoration: underline line-through;">Inline style inside details green times new roman strikethrough italic bold underline</span>
-<blockquote data-author="John Doe">This is a quote by John Doe</blockquote>
+```bash
+hatch test -- --update-goldens
+```
+
+To see how your Markdown and HTML were read, print the tokens the renderer works from. `md2ast input.md output.json` does the same:
+
+```bash
+md2bbcode README.md --ast
+```
+
 </details>

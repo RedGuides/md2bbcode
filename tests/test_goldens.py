@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from md2bbcode import Dialect
-from md2bbcode.main import process_readme
+from md2bbcode.dialect import TAGS
+from md2bbcode.main import convert
 
 FIXTURES = Path(__file__).parent / "fixtures"
 # "xenforo" includes the RedGuides BB codes that ship with md2bbcode; "xenforo-stock" is a board with none.
@@ -38,7 +39,7 @@ def _options(case: str) -> dict:
 
 def convert_fixture(case: str, name: str) -> str:
     markdown = _read(FIXTURES / f"{case}.md")
-    return process_readme(markdown, dialect=DIALECTS[name](), **_options(case))
+    return convert(markdown, dialect=DIALECTS[name](), **_options(case))
 
 
 @pytest.mark.parametrize("name", DIALECTS)
@@ -55,6 +56,22 @@ def test_golden(case: str, name: str, update_goldens: bool):
         f"missing golden {expected_path.name}; run: hatch test -- --update-goldens"
     )
     assert actual == _read(expected_path)
+
+
+def test_the_renderer_fills_exactly_the_placeholders_a_config_may_use(monkeypatch):
+    # dialect.TAGS lists the {placeholders} a config's template may use, and the renderer's
+    # self.tag(...) calls supply the values. Nothing else ties the two lists together, and
+    # a mismatch would only surface as a KeyError in somebody's custom config.
+    real_render = Dialect.render
+
+    def checked_render(self, key, **values):
+        assert set(values) == set(TAGS[key]), f"tags.{key}: the renderer passes {sorted(values)}"
+        return real_render(self, key, **values)
+
+    monkeypatch.setattr(Dialect, "render", checked_render)
+    for case in CASES:
+        for name in DIALECTS:
+            convert_fixture(case, name)
 
 
 def test_every_golden_has_a_fixture():

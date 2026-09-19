@@ -1,9 +1,9 @@
 """A 200 KB README must be routine: every token walk has to stay linear."""
 
-import time
+import timeit
 from pathlib import Path
 
-from md2bbcode.main import process_readme
+from md2bbcode.main import convert
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SMALL_BYTES = 50_000
@@ -22,12 +22,7 @@ def _document(target_bytes: int) -> str:
 
 def _time(document: str) -> float:
     # Best of three keeps a single scheduler hiccup from deciding the ratio.
-    best = float("inf")
-    for _ in range(3):
-        started = time.perf_counter()
-        process_readme(document)
-        best = min(best, time.perf_counter() - started)
-    return best
+    return min(timeit.repeat(lambda: convert(document), number=1, repeat=3))
 
 
 def test_conversion_time_scales_linearly():
@@ -38,6 +33,6 @@ def test_conversion_time_scales_linearly():
     ratio = _time(large) / _time(small)
     assert ratio < MAX_RATIO, f"{SCALE}x input took {ratio:.1f}x as long"
 
-    result = process_readme(large)
+    result = convert(large)
     assert result.count("[HEADING=1]Heading one[/HEADING]") == repeats
     assert result.count("Final paragraph.") == repeats

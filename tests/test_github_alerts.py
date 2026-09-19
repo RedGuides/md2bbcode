@@ -1,4 +1,4 @@
-from md2bbcode.main import process_readme
+from md2bbcode.main import convert
 
 
 def test_github_alert_blockquote_renders_as_admonition():
@@ -7,7 +7,7 @@ def test_github_alert_blockquote_renders_as_admonition():
 > Body for {kind}.
 """.lstrip()
 
-        result = process_readme(markdown, domain="")
+        result = convert(markdown, domain="")
         lowered = result.lower()
 
         assert f"[admonition={kind}]" in lowered
@@ -20,7 +20,7 @@ def test_normal_blockquote_is_not_admonition():
 > Still quoted.
 """.lstrip()
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[quote]" in lowered
@@ -32,7 +32,7 @@ def test_unknown_alert_marker_does_not_trigger_admonition():
 > Not a supported GitHub alert type.
 """.lstrip()
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[quote]" in lowered

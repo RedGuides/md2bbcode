@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from md2bbcode import Dialect, process_readme
+from md2bbcode import Dialect, convert
 from md2bbcode import main as md2bbcode_main
 from md2bbcode.bb_codes import tags_from_bb_codes
 from md2bbcode.dialect import DialectError
@@ -64,9 +64,10 @@ def other_board(tmp_path):
 def test_the_redguides_export_supplies_every_custom_tag_of_the_default_output():
     assert tags_from_bb_codes((Path(md2bbcode_main.__file__).parent / "dialects" / "bb_codes.xml").read_bytes()) == {
         "admonition": "[ADMONITION={kind}]{text}[/ADMONITION]",
-        "abbr": "[ABBR={title}]{text}[/ABBR]",
+        "abbr": "[ABBR=\"{title}\"]{text}[/ABBR]",
         "anchor": "[ANAME={name}]{text}[/ANAME]",
         "link_anchor": "[JUMPTO={anchor}]{text}[/JUMPTO]",
+        "heading_link": "[JUMPTO={anchor}]{text}[/JUMPTO]",
         "mark": "[MARK]{text}[/MARK]",
         "pixelate": "[PIXELATE]{text}[/PIXELATE]",
         "subscript": "[SUB]{text}[/SUB]",
@@ -76,22 +77,22 @@ def test_the_redguides_export_supplies_every_custom_tag_of_the_default_output():
 
 def test_a_bb_code_is_recognised_by_its_html_whatever_it_is_called(other_board):
     board = Dialect.defaults(bb_codes=other_board)
-    assert process_readme(MARKDOWN, dialect=board) == (
-        "[HIGHLIGHT]marked[/HIGHLIGHT] H2O E=mc2 [TOOLTIP=HyperText Markup Language]HTML[/TOOLTIP] "
+    assert convert(MARKDOWN, dialect=board) == (
+        "[HIGHLIGHT]marked[/HIGHLIGHT] H2O E=mc2 [TOOLTIP=\"HyperText Markup Language\"]HTML[/TOOLTIP] "
         "[GOTO=top]up[/GOTO] [TARGET=top]here[/TARGET] note[U][GOTO=fn-1]1[/GOTO][/U]\n\n"
-        '[IMG alt="pixel art"]https://example.com/p.png[/IMG]\n\n'
+        '[IMG alt="pixel art"]https://example.com/p.png[/IMG]\n'
         "[QUOTE][B]Warning:[/B] Careful.[/QUOTE]\n"
-        "[B]Footnotes:[/B]\n[TARGET=fn-1]1[/TARGET]. The footnote.\n\n"
+        "[B]Footnotes:[/B]\n[TARGET=fn-1]1[/TARGET]. The footnote.\n"
     )
 
 
 def test_a_stock_board_gets_built_in_tags_only():
     stock = Dialect.defaults(bb_codes=False)
-    assert process_readme(MARKDOWN, dialect=stock) == (
-        "marked H2O E=mc2 HTML [URL=#top]up[/URL] here note[U]1[/U]\n\n"
-        '[IMG alt="pixel art"]https://example.com/p.png[/IMG]\n\n'
+    assert convert(MARKDOWN, dialect=stock) == (
+        "marked H2O E=mc2 HTML up here note[U]1[/U]\n\n"
+        '[IMG alt="pixel art"]https://example.com/p.png[/IMG]\n'
         "[QUOTE][B]Warning:[/B] Careful.[/QUOTE]\n"
-        "[B]Footnotes:[/B]\n1. The footnote.\n\n"
+        "[B]Footnotes:[/B]\n1. The footnote.\n"
     )
 
     templates = list(stock.tags.values()) + list(stock.headings.values())
@@ -100,7 +101,7 @@ def test_a_stock_board_gets_built_in_tags_only():
 
     redguides = {"mark", "sub", "sup", "abbr", "aname", "jumpto", "admonition", "pixelate"}
     for fixture in FIXTURES.glob("*.md"):
-        output = process_readme(fixture.read_text(encoding="utf-8"), dialect=stock)
+        output = convert(fixture.read_text(encoding="utf-8"), dialect=stock)
         found = {name.lower() for name in _TAG_RE.findall(output)} & redguides
         assert not found, f"{fixture.name}: {sorted(found)}"
 
@@ -108,12 +109,13 @@ def test_a_stock_board_gets_built_in_tags_only():
 @pytest.mark.parametrize(
     "bb_codes, expected",
     [
-        # It is the anchor, the thing a link lands on, that decides whether a footnote
-        # number is linked. The link tag alone would only make a link that goes nowhere.
-        ([], "note[U]1[/U]\n\n[B]Footnotes:[/B]\n1. Foot.\n\n"),
-        (["link"], "note[U]1[/U]\n\n[B]Footnotes:[/B]\n1. Foot.\n\n"),
-        (["anchor"], "note[U][URL=#fn-1]1[/URL][/U]\n\n[B]Footnotes:[/B]\n[TARGET=fn-1]1[/TARGET]. Foot.\n\n"),
-        (["link", "anchor"], "note[U][GOTO=fn-1]1[/GOTO][/U]\n\n[B]Footnotes:[/B]\n[TARGET=fn-1]1[/TARGET]. Foot.\n\n"),
+        # A footnote number is linked only when the board has both halves of the pair.
+        # The link tag alone would go nowhere, and XenForo has no link tag of its own
+        # to reach an anchor with ([URL=#x] shows as plain text).
+        ([], "note[U]1[/U]\n[B]Footnotes:[/B]\n1. Foot.\n"),
+        (["link"], "note[U]1[/U]\n[B]Footnotes:[/B]\n1. Foot.\n"),
+        (["anchor"], "note[U]1[/U]\n[B]Footnotes:[/B]\n[TARGET=fn-1]1[/TARGET]. Foot.\n"),
+        (["link", "anchor"], "note[U][GOTO=fn-1]1[/GOTO][/U]\n[B]Footnotes:[/B]\n[TARGET=fn-1]1[/TARGET]. Foot.\n"),
     ],
     ids=["neither", "link only", "anchor only", "both"],
 )
@@ -125,12 +127,12 @@ def test_a_footnote_number_links_only_when_the_board_has_an_anchor(bb_codes, exp
     path = tmp_path / "bb_codes.xml"
     path.write_text(_export(*(available[name] for name in bb_codes)), encoding="utf-8")
     # No [SUP] either, so the numbers below are bare and the links are easy to see.
-    assert process_readme("note[^1]\n\n[^1]: Foot.\n", dialect=Dialect.defaults(bb_codes=path)) == expected
+    assert convert("note[^1]\n\n[^1]: Foot.\n", dialect=Dialect.defaults(bb_codes=path)) == expected
 
 
 def test_tag_names_follow_the_case_of_the_settings(other_board):
     board = Dialect.from_dict({"tag_case": "lower"}, bb_codes=other_board)
-    assert process_readme("==x==", dialect=board) == "[highlight]x[/highlight]\n\n"
+    assert convert("==x==", dialect=board) == "[highlight]x[/highlight]\n"
     assert 'tag_case = "lower"' in board.to_toml()
 
 
@@ -178,22 +180,22 @@ def test_a_config_names_its_export_relative_to_itself_and_its_own_tags_win(other
     config = other_board.parent / "board.toml"
     config.write_text('bb_codes = "bb_codes.xml"\n[tags]\nabbr = "{text} ({title})"\n', encoding="utf-8")
     markdown = "==x== HTML\n\n*[HTML]: HyperText Markup Language\n"
-    assert process_readme(markdown, dialect=Dialect.load(config)) == (
-        "[HIGHLIGHT]x[/HIGHLIGHT] HTML (HyperText Markup Language)\n\n"
+    assert convert(markdown, dialect=Dialect.load(config)) == (
+        "[HIGHLIGHT]x[/HIGHLIGHT] HTML (HyperText Markup Language)\n"
     )
     # The caller's choice replaces the config's.
-    assert process_readme(markdown, dialect=Dialect.load(config, bb_codes=False)) == (
-        "x HTML (HyperText Markup Language)\n\n"
+    assert convert(markdown, dialect=Dialect.load(config, bb_codes=False)) == (
+        "x HTML (HyperText Markup Language)\n"
     )
 
     config.write_text("bb_codes = false\n", encoding="utf-8")
-    assert process_readme("==x==", dialect=Dialect.load(config)) == "x\n\n"
+    assert convert("==x==", dialect=Dialect.load(config)) == "x\n"
 
 
 def test_a_config_without_bb_codes_keeps_the_export_we_ship(tmp_path):
     config = tmp_path / "board.toml"
     config.write_text('[tags]\ncodespan = "[code]{text}[/code]"\n', encoding="utf-8")
-    assert process_readme("==x== `y`", dialect=Dialect.load(config)) == "[MARK]x[/MARK] [code]y[/code]\n\n"
+    assert convert("==x== `y`", dialect=Dialect.load(config)) == "[MARK]x[/MARK] [code]y[/code]\n"
 
 
 @pytest.mark.parametrize(
@@ -261,7 +263,8 @@ def test_an_export_in_the_current_folder_is_picked_up_unless_something_was_chose
     config = elsewhere / "board.toml"
     config.write_text('bb_codes = "redguides.xml"\n', encoding="utf-8")
     plain_config = elsewhere / "plain.toml"
-    plain_config.write_text('name = "plain"\n', encoding="utf-8")
+    # A config that says nothing about BB codes.
+    plain_config.write_text('unknown_html = "keep"\n', encoding="utf-8")
 
     monkeypatch.chdir(other_board.parent)
     md2bbcode_main.main([readme])
@@ -282,7 +285,7 @@ def test_an_export_in_the_current_folder_is_picked_up_unless_something_was_chose
 
 def test_the_python_api_never_looks_in_the_current_folder(other_board, monkeypatch):
     monkeypatch.chdir(other_board.parent)
-    assert process_readme("==x==") == "[MARK]x[/MARK]\n\n"
+    assert convert("==x==") == "[MARK]x[/MARK]\n"
 
 
 def test_dump_config_shows_what_an_export_gave(other_board, capsys):

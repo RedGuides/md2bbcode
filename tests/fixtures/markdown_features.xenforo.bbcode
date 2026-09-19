@@ -10,17 +10,14 @@ Next line after the hard break. Inline [ICODE]code[/ICODE] and a longer [ICODE]`
 E=mc[SUP]2[/SUP] and H[SUB]2[/SUB]O. Entities: © 2024, 5 < 6 & 7 > 3. Literal: 5 < 6 and a lone & ampersand.
 
 Inline [ISPOILER]spoiler text[/ISPOILER] in a sentence.
-
 [SPOILER]
 Block spoiler line one Block spoiler line two
 [/SPOILER]
 [HR][/HR]
 [QUOTE]
 A blockquote that wraps.
-
 [QUOTE]
 Nested quote.
-
 [/QUOTE]
 [/QUOTE]
 [ADMONITION=note]A note.[/ADMONITION]
@@ -30,7 +27,6 @@ Nested quote.
 [ADMONITION=caution]Caution.[/ADMONITION]
 [QUOTE]
 [!FOO] Not an alert.
-
 [/QUOTE]
 [CODE=bash]echo "fenced with a language"
 [/CODE]
@@ -43,41 +39,33 @@ Nested quote.
 [CODE]indented code block
 second line[/CODE]
 Code with blank lines inside:
-
 [CODE]line one
 
 line three
 [/CODE]
 [LIST][*]Bullet one
-[*]Bullet two[LIST][*]Nested bullet[LIST][*]Deeper
+[*]Bullet two
+[LIST][*]Nested bullet
+[LIST][*]Deeper
 [/LIST]
-
 [/LIST]
-
 [*]Bullet three with [ICODE]code[/ICODE]
 [/LIST]
 [LIST=1][*]Step one
-[*]Step two[CODE=bash]command after the list attaches to step two
+[*]Step two
+[CODE=bash]command after the list attaches to step two
 [/CODE]
-
 [*]Step three continues the merged list
-
-
 [*]Step four
-
-
 [/LIST]
 [LIST]☐ Unchecked task
 🗹 Checked task
 [/LIST]
-
 [B]Term one[/B] :
 [INDENT]Definition one[/INDENT]
 [B]Term two[/B] :
 [INDENT]Definition two[/INDENT]
-
-The [ABBR=Hyper Text Markup Language]HTML[/ABBR] spec is maintained by the [ABBR=World Wide Web Consortium]W3C[/ABBR].
-
+The [ABBR="Hyper Text Markup Language"]HTML[/ABBR] spec is maintained by the [ABBR="World Wide Web Consortium"]W3C[/ABBR].
 [TABLE]
 [TR]
 [TH][LEFT]Left[/LEFT][/TH]
@@ -99,7 +87,6 @@ The [ABBR=Hyper Text Markup Language]HTML[/ABBR] spec is maintained by the [ABBR
 [/TR]
 [/TABLE]
 [LIST][*]Item with a table inside
-
 [TABLE]
 [TR]
 [TH]A[/TH]
@@ -110,18 +97,14 @@ The [ABBR=Hyper Text Markup Language]HTML[/ABBR] spec is maintained by the [ABBR
 [TD]2[/TD]
 [/TR]
 [/TABLE]
-
 [/LIST]
 Footnote reference one[SUP][U][JUMPTO=fn-1]1[/JUMPTO][/U][/SUP] and two[SUP][U][JUMPTO=fn-2]2[/JUMPTO][/U][/SUP].
 
-Links: [URL=https://example.com/path?q=1&r=2]absolute[/URL], [URL=docs/guide.md]relative[/URL], [URL=#heading-two]anchor[/URL], [URL=mailto:someone@example.com]mailto[/URL], [URL=//example.com/x]protocol relative[/URL], [URL=#harmful-link]harmful[/URL], [URL=https://autolink.example.com]https://autolink.example.com[/URL], and bare https://bare.example.com.
+Links: [URL=https://example.com/path?q=1&r=2]absolute[/URL], [URL=docs/guide.md]relative[/URL], [JUMPTO=-heading-two]anchor[/JUMPTO], [URL=mailto:someone@example.com]mailto[/URL], [URL=//example.com/x]protocol relative[/URL], [URL=#harmful-link]harmful[/URL], [URL=https://autolink.example.com]https://autolink.example.com[/URL], and bare https://bare.example.com.
 
 Images: [IMG alt="png"]https://example.com/image.png[/IMG], [IMG alt="svg"]https://images.weserv.nl/?url=https%3A%2F%2Fexample.com%2Flogo.svg&output=png[/IMG], [PIXELATE][IMG alt="pixel art alt"]https://example.com/sprite.png[/IMG][/PIXELATE], [IMG]https://example.com/noalt.png[/IMG], [IMG alt="relative"]images/local.png[/IMG], [URL=https://github.com/o/r/actions][IMG alt="badge"]https://raster.shields.io/github/actions/workflow/status/o/r/ci.yml.png?branch=main[/IMG][/URL], [IMG alt="data svg"]#harmful-link[/IMG].
 
 Final paragraph.
-
 [B]Footnotes:[/B]
 [ANAME=fn-1]1[/ANAME]. First footnote.
-
 [ANAME=fn-2]2[/ANAME]. Second footnote with [B]bold[/B].
-

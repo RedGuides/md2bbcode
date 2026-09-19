@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 
-from md2bbcode.main import process_readme
+from md2bbcode.main import convert
 
 
 def test_redguides_specific_bbcodes_from_xml():
@@ -37,7 +37,7 @@ The HTML specification is maintained by the W3C.
 [^1]: This is the footnote.
 """.lstrip()
 
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     assert result is not None
     assert isinstance(result, str)
 

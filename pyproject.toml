@@ -13,7 +13,6 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
-  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
   "Operating System :: OS Independent",
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
@@ -22,7 +21,8 @@ classifiers = [
   "Topic :: Text Processing :: Markup :: Markdown"
 ]
 dependencies = [
-  "mistune>=3.3.4"
+  "mistune>=3.3.4",
+  "emoji>=2.14.1"
 ]
 
 [project.scripts]
@@ -55,8 +55,7 @@ include = [
   "LICENSE.txt",
   "src/md2bbcode/*.py",
   "src/md2bbcode/dialects/*.toml",
-  "src/md2bbcode/dialects/*.xml",
-  "src/md2bbcode/renderers/*.py"
+  "src/md2bbcode/dialects/*.xml"
 ]
 
 [tool.hatch.build.targets.wheel]

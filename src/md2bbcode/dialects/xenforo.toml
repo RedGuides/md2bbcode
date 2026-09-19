@@ -1,12 +1,13 @@
 # Built-in XenForo 2.x tags, with custom tags from the export below.
 # RedGuides tags are bundled; export your own at admin.php?bb-codes.
 # Uppercase tags and lowercase options match XenForo's editor.
-name = "xenforo"
 paragraph_separator = "\n\n"
 # Keep or strip unsupported HTML tags.
 unknown_html = "keep"
 # Letter case for custom tags too.
 tag_case = "upper"
+# [HEADING] anchors its own text, so "#section" links are pointed at it; "none" leaves them alone.
+heading_anchors = "xenforo"
 # Custom tag export; false disables custom tags (--no-custom-bbcode).
 bb_codes = "bb_codes.xml"
 
@@ -16,7 +17,7 @@ strong          = "[B]{text}[/B]"
 emphasis        = "[I]{text}[/I]"
 insert          = "[U]{text}[/U]"
 strikethrough   = "[S]{text}[/S]"
-# custom on most boards: mark, superscript, subscript, abbr, anchor, pixelate, admonition
+# custom on most boards: mark, superscript, subscript, abbr, anchor, link_anchor, heading_link, pixelate, admonition
 mark            = "{text}"
 superscript     = "{text}"
 subscript       = "{text}"
@@ -24,9 +25,14 @@ codespan        = "[ICODE]{text}[/ICODE]"
 inline_spoiler  = "[ISPOILER]{text}[/ISPOILER]"
 abbr            = "{text}"
 link            = "[URL={url}]{text}[/URL]"
-# HTML only, for now: <a href="#x">, <a name="x"> and <a href="mailto:...">.
-link_anchor     = "[URL=#{anchor}]{text}[/URL]"
+# A link within a post needs a custom BB code, because XenForo shows [URL=#x] as plain text.
+# An export holding <a href="#{option}">{text}</a> fills in link_anchor and heading_link, and one
+# holding <a name="{option}">{text}</a> fills in anchor. Without them the text stays and the link goes.
+# link_anchor and anchor are a matching pair, used for footnotes and for HTML <a name="x">.
+link_anchor     = "{text}"
 anchor          = "{text}"
+# A link to a heading. [HEADING] writes the anchor itself, so only the link needs a tag.
+heading_link    = "{text}"
 email           = "[EMAIL]{address}[/EMAIL]"
 # <font> and inline CSS
 font_color      = "[COLOR={color}]{text}[/COLOR]"
@@ -45,7 +51,9 @@ block_code_nolang = "[CODE]{text}[/CODE]"
 block_quote     = "[QUOTE]\n{text}[/QUOTE]"
 block_quote_author = "[QUOTE=\"{author}\"]\n{text}[/QUOTE]"
 admonition      = "[QUOTE][B]{label}:[/B] {text}[/QUOTE]"
-block_spoiler   = "[SPOILER={title}]{text}[/SPOILER]"
+# Options holding free text are quoted: XenForo reads a quoted option up to the first "]
+# and the renderer removes quotes and line breaks from the value, so a title or alt may hold ].
+block_spoiler   = "[SPOILER=\"{title}\"]{text}[/SPOILER]"
 block_spoiler_notitle = "[SPOILER]{text}[/SPOILER]"
 block_error     = "[COLOR=red][ICODE]{text}[/ICODE][/COLOR]"
 

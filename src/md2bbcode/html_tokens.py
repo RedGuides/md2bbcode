@@ -1,8 +1,8 @@
-"""Turn HTML tags into tokens for the BBCode renderer."""
+"""Read HTML into tag events, and turn the tags into tokens for the BBCode renderer."""
 
 import html
 import re
-from typing import Dict, List, Optional
+from html.parser import HTMLParser
 
 # Allowed XenForo 2.3 options; see XF\BbCode\RuleSet::addDefaultTags().
 _XF_COLOR_OPTION_RE = re.compile(
@@ -12,10 +12,15 @@ _XF_COLOR_OPTION_RE = re.compile(
 _XF_FONT_OPTION_RE = re.compile(r"^[a-z0-9 \-]+$", re.IGNORECASE)
 _XF_SIZE_OPTION_RE = re.compile(r"^[0-9]+(px)?$", re.IGNORECASE)
 
+# Anything in a font name other than letters, numbers, spaces and hyphens.
+_FONT_UNSAFE_RE = re.compile(r"[^a-z0-9 \-]+", re.IGNORECASE)
+_SPACES_RE = re.compile(r"\s+")
+
 # Require a semicolon so URL text like &region=US stays intact.
 _REFERENCE_RE = re.compile(r"&(#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
 
 VOID_TAGS = {"br", "hr", "img"}
+LIST_TAGS = {"ul", "ol"}
 
 _INLINE_TAGS = {
     "b": "strong",
@@ -32,14 +37,17 @@ _INLINE_TAGS = {
     "mark": "mark",
 }
 
-# Keep the contents of these tags, not the tags themselves.
-_TRANSPARENT_TAGS = {"thead", "tbody", "tfoot"}
+# Headings and their levels, the same ones Markdown's # to ###### give.
+_HEADING_TAGS = {"h1": 1, "h2": 2, "h3": 3, "h4": 4, "h5": 5, "h6": 6}
 
-# No BBCode plays a file, so these become a link to it.
+# Table sections. Keep the contents of these tags, not the tags themselves.
+TABLE_SECTION_TAGS = {"thead", "tbody", "tfoot"}
+
+# Link media files rather than guessing an attachment or media-site ID.
 _MEDIA_TAGS = {"audio", "video"}
 
 CONVERTED_TAGS = (
-    set(_INLINE_TAGS) | VOID_TAGS | _TRANSPARENT_TAGS | _MEDIA_TAGS
+    set(_INLINE_TAGS) | set(_HEADING_TAGS) | VOID_TAGS | TABLE_SECTION_TAGS | _MEDIA_TAGS
     | {"a", "abbr", "blockquote", "code", "details", "div", "font", "kbd", "li", "ol",
        "p", "pre", "span", "summary", "table", "td", "th", "tr", "ul"}
 )
@@ -62,35 +70,123 @@ def _strip_important(value: str) -> str:
     return value.replace("!important", "").strip()
 
 
-def _sanitize_color(value: str) -> Optional[str]:
+def _sanitize_option(value: str, allowed: re.Pattern) -> str | None:
+    """Clean up a colour or size, and return it only if XenForo accepts it."""
     value = _strip_important(value.strip().strip('"').strip("'"))
-    return value if value and _XF_COLOR_OPTION_RE.match(value) else None
+    return value if value and allowed.match(value) else None
 
 
-def _sanitize_size(value: str) -> Optional[str]:
-    value = _strip_important(value.strip().strip('"').strip("'"))
-    return value if value and _XF_SIZE_OPTION_RE.match(value) else None
+def _sanitize_color(value: str) -> str | None:
+    return _sanitize_option(value, _XF_COLOR_OPTION_RE)
 
 
-def _sanitize_font(value: str) -> Optional[str]:
+def _sanitize_size(value: str) -> str | None:
+    return _sanitize_option(value, _XF_SIZE_OPTION_RE)
+
+
+def _sanitize_font(value: str) -> str | None:
     value = _strip_important(value.strip())
     # Use the first font, e.g. Arial from "Arial", sans-serif.
     if "," in value:
         value = value.split(",", 1)[0]
     value = value.strip().strip('"').strip("'")
     # Keep only letters, numbers, spaces and hyphens.
-    value = re.sub(r"[^a-z0-9 \-]+", " ", value, flags=re.IGNORECASE)
-    value = re.sub(r"\s+", " ", value).strip()
+    value = _FONT_UNSAFE_RE.sub(" ", value)
+    value = _SPACES_RE.sub(" ", value).strip()
     return value if value and _XF_FONT_OPTION_RE.match(value) else None
 
 
+# Reading HTML
+#
+# HTMLParser decodes references without semicolons, changing "&region=US" to "®ion=US".
+# Disabling convert_charrefs loses whether a reference had a semicolon.
+# Escape every "&" before parsing to preserve the original text:
+#
+# - html_events adds "&amp;"; HTMLParser removes this layer from text and attributes.
+# - _as_written removes it from raw opening tags.
+# - text_token protects decoded attribute values when reused as text.
+# - unescape_references decodes only semicolon-terminated references.
+# The renderer decodes text; attributes and HTML code content are decoded here.
+
 def unescape_references(value: str) -> str:
-    """Decode HTML escapes like &copy; and &#169;."""
+    """Decode only HTML references that end with a semicolon, such as &copy; and &#169;."""
     return _REFERENCE_RE.sub(lambda match: html.unescape(match.group(0)), value)
 
 
-def _parse_style(style: str) -> Dict[str, str]:
-    css_properties: Dict[str, str] = {}
+def text_token(text: str) -> dict:
+    """Keep decoded text from being decoded again by the renderer."""
+    return {"type": "text", "raw": text.replace("&", "&amp;")}
+
+
+def _as_written(text: str) -> str:
+    """Restore the original opening tag after html_events escapes ampersands."""
+    return text.replace("&amp;", "&")
+
+
+class _EventCollector(HTMLParser):
+    """Collect HTML tags and text in order, as plain tuples:
+
+        ("start", tag, attrs, raw)    attrs is a dict; raw is the tag as written
+        ("end", tag)
+        ("text", data)
+
+    Comments, doctypes and processing instructions are left out.
+    """
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.events = []
+
+    def handle_starttag(self, tag, attrs):
+        values = {}
+        for name, value in attrs:
+            # A repeated attribute keeps its first value.
+            if name not in values:
+                values[name] = unescape_references(value or "")
+        self.events.append(("start", tag, values, _as_written(self.get_starttag_text())))
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if tag not in VOID_TAGS:
+            # Close self-closing tags like <a name="x"/>.
+            self.handle_endtag(tag)
+
+    def handle_endtag(self, tag):
+        self.events.append(("end", tag))
+
+    def handle_data(self, data):
+        # Rejoin text split by a stray "<", including incomplete tags recovered by html_events.
+        if self.events and self.events[-1][0] == "text":
+            data = self.events.pop()[1] + data
+        self.events.append(("text", data))
+
+
+def html_events(source: str) -> list:
+    """Collect tags and text, leaving &amp; and similar escapes for the renderer."""
+    parser = _EventCollector()
+    parser.feed(source.replace("&", "&amp;"))
+
+    # close() can drop an incomplete tag, e.g. "text <unclosed tag".
+    # Save the unparsed input first; rawdata is an undocumented HTMLParser buffer.
+    unparsed = parser.rawdata
+    events_before_close = len(parser.events)
+    parser.close()
+
+    tag_start = unparsed.find("<")
+    if tag_start == -1:
+        return parser.events
+    looks_like_a_tag = unparsed[tag_start + 1:tag_start + 2].isalpha() or unparsed.startswith("</", tag_start)
+    came_out_as_text = any(event[0] == "text" and "<" in event[1] for event in parser.events[events_before_close:])
+    if looks_like_a_tag and not came_out_as_text:
+        # Keep the cut-off tag as text instead of losing it.
+        parser.handle_data(_as_written(unparsed[tag_start:]))
+    return parser.events
+
+
+# Turning tags into tokens
+
+def _parse_style(style: str) -> dict[str, str]:
+    css_properties: dict[str, str] = {}
     for item in style.split(";"):
         if ":" not in item:
             continue
@@ -101,12 +197,12 @@ def _parse_style(style: str) -> Dict[str, str]:
     return css_properties
 
 
-def _alignment(attrs: dict, css: dict) -> Optional[str]:
+def _alignment(attrs: dict, css: dict) -> str | None:
     align = (attrs.get("align") or css.get("text-align") or "").strip().lower()
     return align if align in ("left", "center", "right") else None
 
 
-def _style_wrappers(attrs: dict, css: dict, core: Optional[str] = None) -> List[dict]:
+def _style_wrappers(attrs: dict, css: dict, core: str | None = None) -> list[dict]:
     """Turn font and CSS styles into tokens, without repeating the tag's own style."""
     font = {
         "color": _sanitize_color(attrs.get("color") or "") or _sanitize_color(css.get("color", "")),
@@ -132,7 +228,7 @@ def _style_wrappers(attrs: dict, css: dict, core: Optional[str] = None) -> List[
     return wrappers
 
 
-def _code_language(attrs: dict) -> Optional[str]:
+def _code_language(attrs: dict) -> str | None:
     for cls in (attrs.get("class") or "").split():
         for prefix in ("language-", "lang-"):
             if cls.startswith(prefix) and cls != prefix:
@@ -140,13 +236,8 @@ def _code_language(attrs: dict) -> Optional[str]:
     return None
 
 
-def text_token(text: str) -> dict:
-    """Keep decoded text from being decoded again by the renderer."""
-    return {"type": "text", "raw": text.replace("&", "&amp;")}
-
-
-def plain_text(tokens: List[dict]) -> str:
-    """Get token text without markup, for code blocks."""
+def plain_text(tokens: list[dict]) -> str:
+    """Get token text without markup, for code blocks and heading anchors."""
     parts = []
     for token in tokens:
         if token["type"] in ("softbreak", "linebreak"):
@@ -159,21 +250,29 @@ def plain_text(tokens: List[dict]) -> str:
 
 
 class Element:
-    """Track an open HTML tag and its content."""
+    """Track an open HTML tag and where its content goes.
 
-    def __init__(self, tag: str, attrs: dict, raw: str, token: Optional[dict], children: Optional[list] = None):
+    Converted tags put content in the token's ``children`` or its innermost style wrapper.
+    With no token, ``children`` is either the parent's list (e.g. an unstyled <span>)
+    or a discarded list (e.g. <script>).
+
+    ``keep_end_tag`` preserves both HTML tags when conversion fails, e.g. <a> with no href.
+    Its content still goes into the parent's list.
+    """
+
+    def __init__(self, tag: str, attrs: dict, raw: str, token: dict | None, children: list | None = None):
         self.tag = tag
         self.attrs = attrs
         self.raw = raw  # restored if the tag never closes
-        self.token = token  # None means content goes into the parent
+        self.token = token  # None for tags that pass through or discard their content
         self.children = children
         self.keep_end_tag = False  # keep the closing tag as HTML too
         self.language = None  # from <pre> or its inner <code>
-        self.parent_list = None  # set by pair_html
+        self.parent_list = None  # where the tag stands; set by _Pairer._push in plugins.py
         self.index = 0
 
 
-def _chain(element: Element, tokens: List[dict]) -> Element:
+def _chain(element: Element, tokens: list[dict]) -> Element:
     """Nest tokens, with the content inside the last one."""
     for outer, inner in zip(tokens, tokens[1:]):
         outer["children"].append(inner)
@@ -182,7 +281,7 @@ def _chain(element: Element, tokens: List[dict]) -> Element:
     return element
 
 
-def _link_token(attrs: dict) -> Optional[dict]:
+def _link_token(attrs: dict) -> dict | None:
     href = (attrs.get("href") or "").strip()
     if href:
         if href.lower().startswith("mailto:"):
@@ -198,7 +297,7 @@ def _link_token(attrs: dict) -> Optional[dict]:
     return None
 
 
-def void_token(tag: str, attrs: dict) -> Optional[dict]:
+def void_token(tag: str, attrs: dict) -> dict | None:
     """Convert <br>, <hr> or <img>, returning None to keep the HTML."""
     if tag == "br":
         return {"type": "linebreak"}
@@ -211,12 +310,12 @@ def void_token(tag: str, attrs: dict) -> Optional[dict]:
     return {"type": "image", "children": [text_token(alt)] if alt else [], "attrs": {"url": src}}
 
 
-def start_element(tag: str, attrs: dict, raw: str, stack: List[Element]) -> Optional[Element]:
+def start_element(tag: str, attrs: dict, raw: str, stack: list[Element]) -> Element | None:
     """Convert an opening tag, returning None to keep the HTML."""
     element = Element(tag, attrs, raw, None)
     css = _parse_style(attrs.get("style") or "")
 
-    if tag in _TRANSPARENT_TAGS:
+    if tag in TABLE_SECTION_TAGS:
         return element
 
     if tag in _INLINE_TAGS:
@@ -239,20 +338,28 @@ def start_element(tag: str, attrs: dict, raw: str, stack: List[Element]) -> Opti
         return _chain(element, [token]) if token else None
 
     if tag in _MEDIA_TAGS:
-        # XenForo plays a video through its attachment or media-site tags, neither of
-        # which we can address from a README, so link to the file instead.
         src = (attrs.get("src") or "").strip()
         if not src:
             # The player is built from <source> children; leave it as written.
             return None
         element.token = {"type": "link", "children": [text_token(src)], "attrs": {"url": src}}
-        # Whatever is inside is a message for browsers that cannot play it, not for readers.
+        # Omit the player's fallback message; the file link replaces the player.
         element.children = []
         return element
 
     if tag == "abbr":
         title = attrs.get("title")
         return _chain(element, [{"type": "abbr", "children": [], "attrs": {"title": title}}]) if title else None
+
+    if tag in _HEADING_TAGS:
+        # The token Markdown's "# Title" makes, so the two render and anchor alike.
+        token = {"type": "heading", "children": [], "attrs": {"level": _HEADING_TAGS[tag]}, "style": "atx"}
+        tokens = [token] + _style_wrappers(attrs, css)
+        align = _alignment(attrs, css)
+        if align:
+            # [CENTER] goes around the whole heading, as in <h1 align="center">.
+            tokens.insert(0, {"type": "div", "children": [], "attrs": {"align": align}})
+        return _chain(element, tokens)
 
     if tag in ("p", "div"):
         token = {"type": "paragraph" if tag == "p" else "div", "children": []}
@@ -274,8 +381,8 @@ def start_element(tag: str, attrs: dict, raw: str, stack: List[Element]) -> Opti
             tokens.append({"type": "div", "children": [], "attrs": {"align": align}})
         return _chain(element, tokens + _style_wrappers(attrs, css))
 
-    if tag in ("ul", "ol"):
-        depth = sum(1 for parent in stack if parent.tag in ("ul", "ol"))
+    if tag in LIST_TAGS:
+        depth = sum(1 for parent in stack if parent.tag in LIST_TAGS)
         token = {"type": "list", "children": [], "tight": True, "attrs": {"depth": depth, "ordered": tag == "ol"}}
         return _chain(element, [token])
 
@@ -296,14 +403,14 @@ def start_element(tag: str, attrs: dict, raw: str, stack: List[Element]) -> Opti
         return _chain(element, [{"type": "block_spoiler", "children": []}])
 
     if tag == "summary" and stack and stack[-1].tag == "details":
-        # Becomes the spoiler title when </summary> closes it.
+        # Becomes the spoiler title when </summary> closes it; see _Pairer._lift_title.
         return _chain(element, [{"type": "summary", "children": []}])
 
     return None
 
 
-def finish_element(element: Element, parent: Optional[Element]) -> None:
-    """Finish code blocks and spoiler titles once their content is ready."""
+def finish_element(element: Element, parent: Element | None) -> None:
+    """Finish code spans and code blocks once their content is ready."""
     token = element.token
     if element.tag in ("code", "kbd"):
         token["raw"] = unescape_references(plain_text(token.pop("children")))
@@ -317,8 +424,3 @@ def finish_element(element: Element, parent: Optional[Element]) -> None:
         token["style"] = "fenced"
         if element.language:
             token["attrs"] = {"info": element.language}
-
-    elif element.tag == "summary":
-        del element.parent_list[element.index]
-        if token["children"]:
-            parent.token["attrs"] = {"title": token["children"]}

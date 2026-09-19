@@ -1,6 +1,6 @@
 from urllib.parse import quote
 
-from md2bbcode.main import process_readme
+from md2bbcode.main import convert
 
 
 def test_github_actions_badge_rewrites_to_png():
@@ -8,7 +8,7 @@ def test_github_actions_badge_rewrites_to_png():
         "[![Publish to PyPI](https://github.com/RedGuides/md2bbcode/actions/workflows/publish.yml/badge.svg)]"
         "(https://github.com/RedGuides/md2bbcode/actions/workflows/publish.yml)"
     )
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert "[url=https://github.com/redguides/md2bbcode/actions/workflows/publish.yml]" in lowered
@@ -21,7 +21,7 @@ def test_github_actions_badge_rewrites_to_png():
 def test_html_svg_wraps_weserv():
     svg_url = "https://example.com/asset.svg?x=1&y=2"
     markdown = f'<img src="{svg_url}" alt="Alt text">'
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     expected = f"https://images.weserv.nl/?url={quote(svg_url, safe='')}&output=png"
@@ -32,7 +32,7 @@ def test_html_svg_wraps_weserv():
 def test_non_svg_image_unchanged():
     png_url = "https://example.com/x.png"
     markdown = f"![alt]({png_url})"
-    result = process_readme(markdown, domain="")
+    result = convert(markdown, domain="")
     lowered = result.lower()
 
     assert png_url in lowered

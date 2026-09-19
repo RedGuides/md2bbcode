@@ -65,4 +65,18 @@ Between comments.
 
 <div><!-- hidden note --><b>Visible</b></div>
 
+<h1 align="center">
+  <img src="https://example.com/logo.png" alt="logo">
+  <br>
+  Centered HTML heading
+</h1>
+
+<h2>Plain HTML heading with <b>bold</b></h2>
+
+<h5>A level the board lacks</h5>
+
+Before the styled block.
+
+<div style="color:red">Styled block.</div>
+
 After the blocks.

@@ -1,6 +1,6 @@
-# uses a custom mistune renderer to convert Markdown to BBCode. The custom renderer is defined in the bbcode.py file.
-# HTML tags are parsed before rendering (plugins.py, html_tokens.py).
-# use md2ast to see what the renderer gets, for debugging.
+# Converts Markdown to BBCode with a custom mistune renderer (renderer.py).
+# HTML tags are paired into tokens before rendering (plugins.py, html_tokens.py).
+# Run md2bbcode --ast to see what the renderer gets, for debugging.
 
 # standard library
 import argparse
@@ -8,11 +8,13 @@ import functools
 import json
 import os
 import sys
+import warnings
 from urllib.parse import urlparse
 from importlib.metadata import PackageNotFoundError, version as _distribution_version
 
 # mistune
 import mistune
+from mistune import BlockState
 from mistune.plugins.formatting import strikethrough, mark, superscript, subscript, insert
 from mistune.plugins.table import table, table_in_list
 from mistune.plugins.footnotes import footnotes
@@ -24,8 +26,7 @@ from mistune.plugins.spoiler import spoiler
 # local
 from md2bbcode.dialect import Dialect, DialectError
 from md2bbcode.plugins import merge_ordered_lists, pair_html
-from md2bbcode.renderers.bbcode import BBCodeRenderer
-from md2bbcode.html2bbcode import process_html
+from md2bbcode.renderer import BBCodeRenderer
 
 # Use a XenForo export from the current folder if present.
 LOCAL_BB_CODES = "bb_codes.xml"
@@ -33,33 +34,55 @@ LOCAL_BB_CODES = "bb_codes.xml"
 PLUGINS = [strikethrough, mark, superscript, subscript, insert, table, footnotes, task_lists, def_list, abbr, spoiler, table_in_list, merge_ordered_lists]
 
 
-# conversion functions
+# conversion
 
-def convert_markdown_to_bbcode(markdown_text, domain=None, link_base=None, image_base=None, dialect=None):
-    # Create a Markdown parser instance using the custom BBCode renderer
-    renderer = BBCodeRenderer(domain=domain, link_base=link_base, image_base=image_base, dialect=dialect)
-    markdown_parser = mistune.create_markdown(renderer=renderer, plugins=PLUGINS)
+class Converter:
+    """Convert Markdown or HTML to BBCode with a reusable parser and renderer."""
 
-    # Convert Markdown text to BBCode
-    return markdown_parser(markdown_text)
+    def __init__(self, dialect=None, link_base=None, image_base=None, domain=None):
+        self.renderer = BBCodeRenderer(domain=domain, link_base=link_base, image_base=image_base, dialect=dialect)
+        self._markdown = mistune.create_markdown(renderer=self.renderer, plugins=PLUGINS)
+        self._tokens = mistune.create_markdown(renderer=None, plugins=PLUGINS)
+
+    def markdown(self, text: str) -> str:
+        """Convert Markdown and embedded HTML to BBCode, adding a final newline to nonempty output."""
+        bbcode = self._markdown(text)
+        if bbcode:
+            bbcode += '\n'
+        return bbcode
+
+    def html(self, text: str) -> str:
+        """Convert HTML to BBCode without parsing Markdown syntax."""
+        return self.renderer([{"type": "block_html", "raw": text}], BlockState())
+
+    def tokens(self, text: str) -> list:
+        """Return parsed Markdown tokens with HTML tags paired for rendering."""
+        return pair_html(self._tokens(text))
+
+
+def convert(markdown_text, dialect=None, link_base=None, image_base=None, domain=None) -> str:
+    """Convert Markdown, and any HTML inside it, to BBCode."""
+    return Converter(dialect=dialect, link_base=link_base, image_base=image_base, domain=domain).markdown(markdown_text)
 
 
 def convert_markdown_to_ast(markdown_text):
     """Show parsed Markdown and HTML before rendering, for debugging."""
-    markdown_parser = mistune.create_markdown(renderer=None, plugins=PLUGINS)
-    return pair_html(markdown_parser(markdown_text))
+    return Converter().tokens(markdown_text)
+
+
+def html_to_bbcode(html, domain=None, link_base=None, image_base=None, dialect=None) -> str:
+    """Convert an HTML document or fragment to BBCode."""
+    return Converter(dialect=dialect, link_base=link_base, image_base=image_base, domain=domain).html(html)
 
 
 def process_readme(markdown_text, domain=None, debug=False, link_base=None, image_base=None, dialect=None):
-    """Convert Markdown and any HTML inside it to BBCode."""
-    final_bbcode = convert_markdown_to_bbcode(markdown_text, domain, link_base, image_base, dialect)
-
-    # Save the result for debugging.
-    if debug:
-        with open('readme.finalpass', 'w', encoding='utf-8') as file:
-            file.write(final_bbcode)
-
-    return final_bbcode
+    """Deprecated alias for :func:`convert`; ``debug`` is kept for positional compatibility and ignored."""
+    warnings.warn(
+        "process_readme() is deprecated; use md2bbcode.convert()",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return convert(markdown_text, dialect=dialect, link_base=link_base, image_base=image_base, domain=domain)
 
 
 # shared command-line functions
@@ -76,13 +99,12 @@ class CliError(Exception):
     """An error we can explain without showing a Python traceback."""
 
 
-def _force_utf8(stream) -> bool:
+def _force_utf8(stream) -> None:
     try:
         stream.reconfigure(encoding="utf-8")
-        return True
     except (AttributeError, ValueError, OSError):
         # Some streams don't let us change the encoding.
-        return False
+        pass
 
 
 def read_input(path: str) -> str:
@@ -157,28 +179,37 @@ def _add_dialect_arguments(parser) -> None:
     custom.add_argument('--no-custom-bbcode', action='store_true', help='Use only the tags built into the forum software')
 
 
+def _checked_base_url(option: str, value):
+    """Return a full HTTP(S) URL or None, raising CliError for an invalid URL."""
+    if not value:
+        return None
+    try:
+        parsed = urlparse(value)
+        is_full_url = parsed.scheme in ('http', 'https') and bool(parsed.netloc)
+    except ValueError:
+        # Invalid URLs, such as a host with an unclosed bracket.
+        is_full_url = False
+    if not is_full_url:
+        raise CliError(f"{option} must be a full URL like https://example.com/: {value}")
+    return value
+
+
 def base_urls(args) -> dict:
     """Check and return the base URLs."""
-    bases = {}
-    for name in ('link_base', 'image_base', 'domain'):
-        value = getattr(args, name) or None
-        if value is not None:
-            try:
-                parsed = urlparse(value)
-            except ValueError:
-                # Invalid URLs, such as a host with an unclosed bracket.
-                parsed = None
-            if parsed is None or parsed.scheme not in ('http', 'https') or not parsed.netloc:
-                option = '--' + name.replace('_', '-')
-                raise CliError(f"{option} must be a full URL like https://example.com/: {value}")
-        bases[name] = value
-    return bases
+    return {
+        'link_base': _checked_base_url('--link-base', args.link_base),
+        'image_base': _checked_base_url('--image-base', args.image_base),
+        'domain': _checked_base_url('--domain', args.domain),
+    }
 
 
 def load_dialect(args) -> Dialect:
     config = args.config or os.environ.get('MD2BBCODE_CONFIG')
-    # None leaves the choice to the config, then the folder, then the export we ship.
-    bb_codes = False if args.no_custom_bbcode else args.bb_codes or os.environ.get('MD2BBCODE_BB_CODES') or None
+    if args.no_custom_bbcode:
+        bb_codes = False
+    else:
+        # None leaves the choice to the config, then the folder, then the export we ship.
+        bb_codes = args.bb_codes or os.environ.get('MD2BBCODE_BB_CODES') or None
     # Look for an export in the current folder.
     found = LOCAL_BB_CODES if os.path.isfile(LOCAL_BB_CODES) else None
     try:
@@ -187,6 +218,12 @@ def load_dialect(args) -> Dialect:
         return Dialect.defaults(bb_codes=bb_codes, default_bb_codes=found)
     except DialectError as exc:
         raise CliError(str(exc)) from exc
+
+
+def _write_ast(input_path: str, output_path=None) -> None:
+    """Write parsed tokens as JSON for md2bbcode --ast and md2ast."""
+    tokens = convert_markdown_to_ast(read_input(input_path))
+    write_output(json.dumps(tokens, indent=4), output_path)
 
 
 def run(command, argv=None) -> None:
@@ -207,22 +244,27 @@ def _md2bbcode(argv=None):
     _add_url_arguments(parser)
     _add_dialect_arguments(parser)
     parser.add_argument('--dump-config', action='store_true', help='Print the current settings as a reusable TOML config, then exit')
-    parser.add_argument('--debug', action='store_true', help='Also save the result to readme.finalpass (use md2ast to see the tokens)')
+    parser.add_argument('--ast', action='store_true', help='Print the tokens the renderer works from (JSON), for debugging')
     _add_version_argument(parser)
     args = parser.parse_args(argv)
 
-    dialect = load_dialect(args)
     if args.dump_config:
-        write_output(dialect.to_toml(), args.output)
+        # The one mode that needs no input file.
+        write_output(load_dialect(args).to_toml(), args.output)
         return
     if args.input is None:
         parser.error('the following arguments are required: input')
+    if args.ast:
+        # The tokens do not depend on the dialect, so a broken config cannot get in the way.
+        _write_ast(args.input, args.output)
+        return
+
+    dialect = load_dialect(args)
     bases = base_urls(args)
 
-    # Read and convert the whole input before writing the result.
+    # Finish reading and converting before opening the output file.
     markdown_text = read_input(args.input)
-    final_bbcode = process_readme(markdown_text, debug=args.debug, dialect=dialect, **bases)
-    write_output(final_bbcode, args.output)
+    write_output(Converter(dialect=dialect, **bases).markdown(markdown_text), args.output)
 
 
 def _html2bbcode(argv=None):
@@ -231,27 +273,23 @@ def _html2bbcode(argv=None):
     _add_output_argument(parser)
     _add_url_arguments(parser)
     _add_dialect_arguments(parser)
-    parser.add_argument("--debug", action="store_true", help="Save output to readme.finalpass for debugging")
     _add_version_argument(parser)
     args = parser.parse_args(argv)
 
     dialect = load_dialect(args)
     bases = base_urls(args)
     html_content = read_input(args.input)
-    converted_bbcode = process_html(html_content, debug=args.debug, dialect=dialect, **bases)
-    write_output(converted_bbcode, args.output)
+    write_output(Converter(dialect=dialect, **bases).html(html_content), args.output)
 
 
 def _md2ast(argv=None):
-    parser = argparse.ArgumentParser(prog='md2ast', description='Show how mistune reads a Markdown file (AST in JSON format), for debugging.')
+    parser = argparse.ArgumentParser(prog='md2ast', description='Show parsed Markdown and HTML as JSON for debugging (same as md2bbcode --ast).')
     parser.add_argument('input', help='Markdown file to convert (use "-" to read piped input)')
     parser.add_argument('output', nargs='?', default='-', help='Save the result to a JSON file. Use "-" or leave this out to print the result.')
     _add_version_argument(parser)
     args = parser.parse_args(argv)
 
-    markdown_text = read_input(args.input)
-    ast_json = json.dumps(convert_markdown_to_ast(markdown_text), indent=4)
-    write_output(ast_json, args.output)
+    _write_ast(args.input, args.output)
 
 
 def main(argv=None):

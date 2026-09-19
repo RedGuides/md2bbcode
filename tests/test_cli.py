@@ -94,7 +94,7 @@ def test_stdout_output_is_utf8_and_matches_output_file(tmp_path, capsys):
 
     out, err = capsys.readouterr()
     assert err == ""
-    assert out == "Emoji ☐ 🗹 and [I]em[/I]\n\n"
+    assert out == "Emoji ☐ 🗹 and [I]em[/I]\n"
     assert out_path.read_bytes().decode("utf-8") == out
 
 
@@ -152,7 +152,7 @@ def test_config_changes_the_output_of_both_commands(board, readme, tmp_path, cap
     md2bbcode_main.html2bbcode_main([str(html), "--config", board])
 
     out, _ = capsys.readouterr()
-    assert out == "[code]x[/code] [URL=guide.md]g[/URL] [IMG]logo.png[/IMG]\n\n[code]x[/code]\n"
+    assert out == "[code]x[/code] [URL=guide.md]g[/URL] [IMG]logo.png[/IMG]\n[code]x[/code]\n"
 
 
 def test_config_is_taken_from_the_environment_when_not_given(board, readme, monkeypatch, capsys):
@@ -168,7 +168,7 @@ def test_link_base_image_base_and_domain(readme, capsys):
     md2bbcode_main.main([readme, "--domain", ""])
 
     out, _ = capsys.readouterr()
-    assert out.split("\n\n")[:3] == [
+    assert out.splitlines() == [
         "[ICODE]x[/ICODE] [URL=https://l.example/guide.md]g[/URL] [IMG]https://i.example/logo.png[/IMG]",
         "[ICODE]x[/ICODE] [URL=https://d.example/guide.md]g[/URL] [IMG]https://d.example/logo.png[/IMG]",
         "[ICODE]x[/ICODE] [URL=guide.md]g[/URL] [IMG]logo.png[/IMG]",
@@ -189,7 +189,7 @@ def test_dump_config_needs_no_input_and_is_a_working_config(board, readme, tmp_p
 def test_dump_config_prints_the_built_in_settings(capsys):
     md2bbcode_main.main(["--dump-config"])
     out, _ = capsys.readouterr()
-    assert 'name = "xenforo"' in out and "[tags]" in out
+    assert 'unknown_html = "keep"' in out and "[tags]" in out
 
 
 @pytest.mark.parametrize(
@@ -219,3 +219,30 @@ def test_bad_config_names_the_key(readme, tmp_path, capsys):
     out, err = capsys.readouterr()
     assert out == ""
     assert err.count("\n") == 1 and "bad.toml" in err and "tags.codespan" in err
+
+
+def test_ast_prints_the_tokens_the_renderer_works_from(readme, capsys):
+    md2bbcode_main.main([readme, "--ast"])
+    out, _ = capsys.readouterr()
+    assert out.startswith("[")
+
+    md2bbcode_main.md2ast_main([readme])
+    alias, _ = capsys.readouterr()
+    assert alias == out
+
+
+def test_ast_works_while_the_config_is_broken(readme, tmp_path, capsys):
+    # The tokens do not depend on the dialect, and this is when you want to see them.
+    bad = tmp_path / "bad.toml"
+    bad.write_text("not toml", encoding="utf-8")
+    md2bbcode_main.main([readme, "--ast", "--config", str(bad)])
+    out, err = capsys.readouterr()
+    assert out.startswith("[") and err == ""
+
+
+@pytest.mark.parametrize("entry", [md2bbcode_main.main, md2bbcode_main.html2bbcode_main], ids=["md2bbcode", "html2bbcode"])
+def test_debug_is_gone_and_argparse_says_so(entry, readme, capsys):
+    # Removed with the second pass it used to dump; --ast covers the debugging need.
+    _run(lambda: entry([readme, "--debug"]), 2)
+    _, err = capsys.readouterr()
+    assert "--debug" in err
