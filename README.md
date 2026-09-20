@@ -43,7 +43,7 @@ md2bbcode README.md --domain https://github.com/RedGuides/md2bbcode
 <details>
 <summary>Advanced URL options</summary>
 
-For a different GitHub branch or a README in a subfolder, pass that folder's GitHub URL to `--domain`, for example `https://github.com/RedGuides/md2bbcode/tree/dev/docs`.
+For a different GitHub branch, or a Markdown file that lives in a subfolder of the repo, pass that folder's GitHub URL to `--domain`, for example `https://github.com/RedGuides/md2bbcode/tree/dev/docs`.
 
 For other sites, `--domain` uses the same base URL for links and images. To set separate base URLs, use `--link-base` and `--image-base`:
 
