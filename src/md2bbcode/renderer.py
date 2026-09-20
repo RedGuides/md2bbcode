@@ -341,10 +341,8 @@ class BBCodeRenderer(BaseRenderer):
 
     def block_code(self, code: str, **attrs) -> str:
         # Code is left as written. The first word after the fence is the language.
-        lang = None
-        if 'info' in attrs:
-            info = safe_entity(attrs['info'].strip())
-            lang = info.split(None, 1)[0].lower()
+        words = safe_entity(attrs.get('info', '')).split(None, 1)
+        lang = words[0].lower() if words else None
 
         # "plaintext" is what a plain [CODE] tag already is.
         if lang and lang != 'plaintext':
@@ -366,17 +364,6 @@ class BBCodeRenderer(BaseRenderer):
             return self.tag('admonition', text=body, kind=kind, label=kind.capitalize()) + '\n'
 
         return self.tag('block_quote', text=text) + '\n'
-
-    def block_html(self, html: str) -> str:
-        # A safety net: pair_html turns every HTML token into paired tokens or inline_html
-        # before rendering, so nothing reaches this through __call__.
-        kept = self.inline_html(html)
-        if kept:
-            kept += '\n'
-        return kept
-
-    def block_error(self, text: str) -> str:
-        return self.tag('block_error', text=text) + '\n'
 
     def list(self, text: str, ordered: bool, **attrs) -> str:
         # Let the forum number ordered items instead of copying source numbers.

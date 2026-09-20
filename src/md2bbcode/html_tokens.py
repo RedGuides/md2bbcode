@@ -79,7 +79,7 @@ PREFORMATTED_TAGS = {"pre", "code", "kbd"}
 
 BLOCK_TOKEN_TYPES = {
     "paragraph", "block_text", "heading", "thematic_break", "blank_line", "block_code",
-    "block_quote", "block_html", "block_error", "block_spoiler", "div", "caption",
+    "block_quote", "block_spoiler", "div", "caption",
     "list", "list_item", "task_list_item", "def_list", "def_list_head", "def_list_item",
     "table", "table_head", "table_body", "table_row", "table_cell", "footnotes", "footnote_item",
 }

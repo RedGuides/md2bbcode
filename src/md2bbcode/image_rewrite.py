@@ -10,9 +10,6 @@ def rewrite_svg_url(url: str) -> str | None:
     Other URLs come back unchanged. None means an SVG we cannot convert, so the
     caller should link to it instead.
     """
-    if not url:
-        return url
-
     try:
         parsed = urlparse(url)
     except ValueError:

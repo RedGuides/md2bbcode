@@ -52,7 +52,6 @@ TAGS = {
     "admonition": ("text", "kind", "label"),
     "block_spoiler": ("text", "title"),
     "block_spoiler_notitle": ("text",),
-    "block_error": ("text",),
     "caption": ("text",),
     # lists
     "list_ordered": ("text",),
@@ -209,7 +208,8 @@ class Dialect:
 
     def heading(self, level: int, text: str) -> str:
         # Missing levels use the nearest lower number, e.g. level 4 uses 3.
-        available = [number for number in self.headings if number <= max(level, 1)]
+        # Level 1 is always defined, so there is always one to fall back to.
+        available = [number for number in self.headings if number <= level]
         return self.headings[max(available)].format(text=text)
 
     def to_toml(self) -> str:
@@ -230,7 +230,11 @@ class Dialect:
                 levels = ", ".join(f"{level} = {_toml_string(template)}" for level, template in self.headings.items())
                 lines.append(f"heading = {{ {levels} }}")
             else:
-                lines.append(f"{key} = {_toml_string(self.tags[key])}")
+                template = self.tags[key]
+                unused = [f"{{{name}}}" for name in TAGS[key] if f"{{{name}}}" not in template]
+                if unused:
+                    lines.append(f"# {key} can also use {', '.join(unused)}")
+                lines.append(f"{key} = {_toml_string(template)}")
         return "\n".join(lines) + "\n"
 
     # loading

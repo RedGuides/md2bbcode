@@ -3,22 +3,18 @@
 ![md2bbcode logo, original image 'A Specious Origin' by Jerry LoFaro.](https://www.redguides.com/images/md2bbcode-logo.png)
 
 # md2bbcode
-**A wrapper and plugin for [Mistune](https://github.com/lepture/mistune).** It converts most GitHub-flavored Markdown to Xenforo-flavored BBCode. 
+Converts most GitHub-flavored Markdown and HTML to XenForo-flavored BB code. It uses [Mistune](https://github.com/lepture/mistune). You can also configure it to work with your favorite ancient community.
 
 > [!NOTE]  
 > This project is made with LLM assistance (derogatory).
 
 ## Installation
 
-Install as a CLI tool with [pipx](https://pipx.pypa.io):
-
 ```bash
 pipx install md2bbcode
 ```
 
 ## Usage
-
-After installation, you can use md2bbcode from the command line:
 
 ```bash
 md2bbcode README.md
@@ -66,17 +62,17 @@ XenForo has no built-in tag for highlights, superscript, subscript, abbreviation
 > [!TIP]
 > The RedGuides custom BB codes are packaged for import in [bb_codes.xml](src/md2bbcode/dialects/bb_codes.xml). Import the ones you want into XenForo at `admin.php?bb-codes`. Some include CSS, which you can move to your extra.css template for more efficiency.
 
-If your board has its own custom BB codes, export them at `admin.php?bb-codes` and hand over the file:
+If your board has its own custom BB codes, export them at `admin.php?bb-codes` in XenForo and use them:
 
 ```bash
 md2bbcode README.md --bb-codes bb_codes.xml
 ```
 
-md2bbcode checks the HTML each BB code produces to find the right tag for your board. For example, if `[highlight]` produces `<mark>{text}</mark>`, then `==text==` becomes `[HIGHLIGHT]text[/HIGHLIGHT]`. Some common tag names are recognised too.
+md2bbcode checks the HTML each BB code produces to find the right tag for your board. For example, if `[highlight]` produces `<mark>{text}</mark>`, then `==text==` becomes `[HIGHLIGHT]text[/HIGHLIGHT]`.
 
 If your board has no matching BB code, md2bbcode uses a simpler alternative, such as plain text, inline code, or a quote.
 
-Use `--no-custom-bbcode` if your board has only default Xenforo bbcode.
+Use `--no-custom-bbcode` if your board has only default XenForo BB code.
 
 ### Changing a tag
 
@@ -123,31 +119,6 @@ You can use the environment variables `MD2BBCODE_CONFIG` and `MD2BBCODE_BB_CODES
 
 </details>
 
-<details>
-<summary>Admonitions and footnotes</summary>
-
-Your config can specify BB codes that md2bbcode did not recognise, or change how tags are combined. For example, a footnote reference can include both superscript formatting and a link to the footnote.
-
-If your board has an `[ALERT]` BB code, this config uses it for GitHub alerts. It also shows how to underline footnote references and put a period after each footnote number:
-
-```toml
-bb_codes = "bb_codes.xml"
-
-[tags]
-admonition    = "[ALERT={kind}]{text}[/ALERT]"
-footnote_ref  = "[U]{link}[/U]"
-footnote_item = "{target}. {text}"
-```
-
-md2bbcode fills in these placeholders:
-
-- `{kind}` is the alert type, such as `warning`. `{label}` is also available for the display name, such as `Warning`.
-- `{link}` is the footnote reference number, linked when your board supports anchors.
-- `{target}` is the number beside the footnote, with an anchor when supported.
-- `{text}` is the content of the alert or footnote.
-
-</details>
-
 ### HTML files
 
 md2bbcode also installs `html2bbcode`, which converts an HTML file the same way md2bbcode converts the HTML inside Markdown. It takes the same `-o`, `--domain`, `--config` and `--bb-codes` options:
@@ -157,8 +128,6 @@ html2bbcode page.html -o output.bbcode
 ```
 
 ### Use in Python
-
-You can also use the package in your Python project:
 
 ```python
 from md2bbcode import convert
@@ -177,7 +146,7 @@ bbcode = convert(
 ```
 
 <details>
-<summary>Custom BB code in python</summary>
+<summary>Custom BB code in Python</summary>
 
 Use `Dialect` to apply a TOML config:
 
@@ -209,11 +178,11 @@ hatch test
 
 - `main.py` has the commands and `convert()`.
 - `plugins.py` and `html_tokens.py` turn the HTML inside Markdown into tokens, because Mistune does not.
-- `renderer.py` is the Mistune renderer that turns the tokens into BBCode.
+- `renderer.py` is the Mistune renderer that turns the tokens into BB code.
 - `dialect.py` holds the tag settings, which start from `dialects/xenforo.toml`. `bb_codes.py` reads a board's BB code export.
 - `image_rewrite.py` points SVG images at a service that serves them as PNG, which XenForo can show.
 
-Each Markdown file in `tests/fixtures` has its expected BBCode saved beside it. After a change that is meant to alter the output, update the saved files and check the diff:
+Each Markdown file in `tests/fixtures` has its expected BB code saved beside it. After a change that is meant to alter the output, update the saved files and check the diff:
 
 ```bash
 hatch test -- --update-goldens

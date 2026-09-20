@@ -216,6 +216,14 @@ def test_dump_config_prints_the_built_in_settings(capsys):
     assert 'unknown_html = "keep"' in out and "[tags]" in out
 
 
+def test_dump_config_names_the_placeholders_a_tag_leaves_unused(capsys):
+    md2bbcode_main.main(["--dump-config"])
+    out, _ = capsys.readouterr()
+    assert '# footnote_ref can also use {index}\nfootnote_ref = "[U]{link}[/U]"' in out
+    # A tag that uses every placeholder gets no comment.
+    assert "# strong can also use" not in out
+
+
 @pytest.mark.parametrize(
     "extra, expected",
     [

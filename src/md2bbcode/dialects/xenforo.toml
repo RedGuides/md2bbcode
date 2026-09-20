@@ -60,7 +60,6 @@ admonition      = "[QUOTE][B]{label}:[/B] {text}[/QUOTE]"
 # and the renderer removes quotes and line breaks from the value, so a title or alt may hold ].
 block_spoiler   = "[SPOILER=\"{title}\"]{text}[/SPOILER]"
 block_spoiler_notitle = "[SPOILER]{text}[/SPOILER]"
-block_error     = "[COLOR=red][ICODE]{text}[/ICODE][/COLOR]"
 # <figcaption> and a table's <caption>, on a line of their own
 caption         = "{text}"
 

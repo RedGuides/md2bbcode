@@ -74,6 +74,12 @@ def test_renamed_block_code_tag_does_not_change_html_inside_a_fenced_block():
     )
 
 
+@pytest.mark.parametrize("info", ["", "   ", "  ", "\t"])
+def test_a_fence_with_no_language_uses_the_plain_code_tag(info):
+    # Mistune keeps an info string of nothing but spaces, so there may be no first word.
+    assert convert(f"```{info}\nx\n```\n") == "[CODE]x\n[/CODE]\n"
+
+
 def test_html_is_converted_inside_a_tag_that_shares_its_name_with_a_code_template():
     board = _dialect('[tags]\ncodespan = "[b][icode]{text}[/icode][/b]"\n')
     assert convert("**bold with <i>italic</i> inside** `<i>code</i>`", dialect=board) == (
