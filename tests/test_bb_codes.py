@@ -68,6 +68,7 @@ def test_the_redguides_export_supplies_every_custom_tag_of_the_default_output():
         "anchor": "[ANAME={name}]{text}[/ANAME]",
         "link_anchor": "[JUMPTO={anchor}]{text}[/JUMPTO]",
         "heading_link": "[JUMPTO={anchor}]{text}[/JUMPTO]",
+        "kbd": "[KBD]{text}[/KBD]",
         "mark": "[MARK]{text}[/MARK]",
         "pixelate": "[PIXELATE]{text}[/PIXELATE]",
         "subscript": "[SUB]{text}[/SUB]",
@@ -86,6 +87,23 @@ def test_a_bb_code_is_recognised_by_its_html_whatever_it_is_called(other_board):
     )
 
 
+def test_a_key_is_inline_code_until_the_board_has_a_kbd_bb_code(tmp_path):
+    markdown = "Press <kbd>Ctrl</kbd> then `run`.\n"
+    stock = Dialect.defaults(bb_codes=False)
+    assert convert(markdown, dialect=stock) == "Press [ICODE]Ctrl[/ICODE] then [ICODE]run[/ICODE].\n"
+    assert convert(markdown) == "Press [KBD]Ctrl[/KBD] then [ICODE]run[/ICODE].\n"
+
+    export = tmp_path / "bb_codes.xml"
+    export.write_text(_export(_bb_code("key", "<style>kbd{border:1px solid}</style><kbd>{text}</kbd>")), encoding="utf-8")
+    assert convert(markdown, dialect=Dialect.defaults(bb_codes=export)) == "Press [KEY]Ctrl[/KEY] then [ICODE]run[/ICODE].\n"
+
+    # A config that changes inline code changes keys with it, unless it names kbd too.
+    follows = Dialect.from_dict({"tags": {"codespan": "[c]{text}[/c]"}}, bb_codes=False)
+    assert convert(markdown, dialect=follows) == "Press [c]Ctrl[/c] then [c]run[/c].\n"
+    own = Dialect.from_dict({"tags": {"codespan": "[c]{text}[/c]", "kbd": "[k]{text}[/k]"}}, bb_codes=False)
+    assert convert(markdown, dialect=own) == "Press [k]Ctrl[/k] then [c]run[/c].\n"
+
+
 def test_a_stock_board_gets_built_in_tags_only():
     stock = Dialect.defaults(bb_codes=False)
     assert convert(MARKDOWN, dialect=stock) == (
@@ -99,7 +117,7 @@ def test_a_stock_board_gets_built_in_tags_only():
     custom = {name.lower() for template in templates for name in _TAG_RE.findall(template)} - XENFORO_BUILT_IN
     assert not custom, f"xenforo.toml names custom tags, which belong in bb_codes.xml: {sorted(custom)}"
 
-    redguides = {"mark", "sub", "sup", "abbr", "aname", "jumpto", "admonition", "pixelate"}
+    redguides = {"mark", "sub", "sup", "kbd", "abbr", "aname", "jumpto", "admonition", "pixelate"}
     for fixture in FIXTURES.glob("*.md"):
         output = convert(fixture.read_text(encoding="utf-8"), dialect=stock)
         found = {name.lower() for name in _TAG_RE.findall(output)} & redguides

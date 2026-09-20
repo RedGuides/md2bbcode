@@ -19,7 +19,11 @@ _SPACES_RE = re.compile(r"\s+")
 # Require a semicolon so URL text like &region=US stays intact.
 _REFERENCE_RE = re.compile(r"&(#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
 
-VOID_TAGS = {"br", "hr", "img"}
+# XenForo 2.3 image sizes; see XF\BbCode\Renderer\Html::processImageDisplayModifiers().
+_XF_IMAGE_SIZE_RE = re.compile(r"^[0-9.]+(px|%)$", re.IGNORECASE)
+
+# Tags with no content and no closing tag.
+VOID_TAGS = {"br", "hr", "img", "source", "wbr"}
 LIST_TAGS = {"ul", "ol"}
 
 _INLINE_TAGS = {
@@ -27,6 +31,10 @@ _INLINE_TAGS = {
     "strong": "strong",
     "i": "emphasis",
     "em": "emphasis",
+    "var": "emphasis",
+    "cite": "emphasis",
+    "dfn": "emphasis",
+    "q": "inline_quote",
     "u": "insert",
     "ins": "insert",
     "s": "strikethrough",
@@ -43,13 +51,27 @@ _HEADING_TAGS = {"h1": 1, "h2": 2, "h3": 3, "h4": 4, "h5": 5, "h6": 6}
 # Table sections. Keep the contents of these tags, not the tags themselves.
 TABLE_SECTION_TAGS = {"thead", "tbody", "tfoot"}
 
+# Tags BBCode has nothing for. Keep the contents of these too: <picture> leaves its <img>,
+# and <ruby> leaves its text with the reading in brackets, e.g. 漢(kan).
+_TRANSPARENT_TAGS = TABLE_SECTION_TAGS | {"picture", "time", "bdo", "ruby", "rt", "rp"}
+
 # Link media files rather than guessing an attachment or media-site ID.
 _MEDIA_TAGS = {"audio", "video"}
 
+# Inline code. <kbd> has a tag setting of its own, for boards with a [KBD] BB code.
+_CODE_SPAN_TAGS = {"code": "codespan", "tt": "codespan", "samp": "codespan", "kbd": "kbd"}
+
+# Definition lists, as the tokens Markdown's "Term" and ": Definition" lines give.
+_DEFINITION_TAGS = {"dl": "def_list", "dt": "def_list_head", "dd": "def_list_item"}
+
+# <figcaption> inside <figure>, and <caption> inside <table>.
+_CAPTION_PARENTS = {"figcaption": "figure", "caption": "table"}
+
 CONVERTED_TAGS = (
-    set(_INLINE_TAGS) | set(_HEADING_TAGS) | VOID_TAGS | TABLE_SECTION_TAGS | _MEDIA_TAGS
-    | {"a", "abbr", "blockquote", "code", "details", "div", "font", "kbd", "li", "ol",
-       "p", "pre", "span", "summary", "table", "td", "th", "tr", "ul"}
+    set(_INLINE_TAGS) | set(_HEADING_TAGS) | VOID_TAGS | _TRANSPARENT_TAGS | _MEDIA_TAGS
+    | set(_CODE_SPAN_TAGS) | set(_DEFINITION_TAGS) | set(_CAPTION_PARENTS)
+    | {"a", "abbr", "blockquote", "details", "div", "figure", "font", "li", "ol",
+       "p", "pre", "small", "span", "summary", "table", "td", "th", "tr", "ul"}
 )
 
 # Text inside these keeps its whitespace.
@@ -57,7 +79,7 @@ PREFORMATTED_TAGS = {"pre", "code", "kbd"}
 
 BLOCK_TOKEN_TYPES = {
     "paragraph", "block_text", "heading", "thematic_break", "blank_line", "block_code",
-    "block_quote", "block_html", "block_error", "block_spoiler", "div",
+    "block_quote", "block_html", "block_error", "block_spoiler", "div", "caption",
     "list", "list_item", "task_list_item", "def_list", "def_list_head", "def_list_item",
     "table", "table_head", "table_body", "table_row", "table_cell", "footnotes", "footnote_item",
 }
@@ -297,17 +319,40 @@ def _link_token(attrs: dict) -> dict | None:
     return None
 
 
+def _image_size(value: str) -> str | None:
+    """Return a width or height XenForo accepts: "200" and "200px" give "200px", "50%" stays."""
+    value = _strip_important(value.strip()).lower()
+    if value.replace(".", "", 1).isdigit():
+        value += "px"
+    return value if _XF_IMAGE_SIZE_RE.match(value) else None
+
+
+def _image_token(attrs: dict) -> dict | None:
+    src = attrs.get("src")
+    if not src:
+        return None
+    css = _parse_style(attrs.get("style") or "")
+    alt = attrs.get("alt") or ""
+    align = (attrs.get("align") or css.get("float") or "").strip().lower()
+    image = {
+        "url": src,
+        "width": _image_size(attrs.get("width") or css.get("width", "")),
+        "height": _image_size(attrs.get("height") or css.get("height", "")),
+        # XenForo floats an image left or right; it has no other alignment.
+        "align": align if align in ("left", "right") else None,
+    }
+    return {"type": "image", "children": [text_token(alt)] if alt else [], "attrs": image}
+
+
 def void_token(tag: str, attrs: dict) -> dict | None:
     """Convert <br>, <hr> or <img>, returning None to keep the HTML."""
     if tag == "br":
         return {"type": "linebreak"}
     if tag == "hr":
         return {"type": "thematic_break"}
-    src = attrs.get("src")
-    if not src:
-        return None
-    alt = attrs.get("alt") or ""
-    return {"type": "image", "children": [text_token(alt)] if alt else [], "attrs": {"url": src}}
+    if tag == "img":
+        return _image_token(attrs)
+    return None
 
 
 def start_element(tag: str, attrs: dict, raw: str, stack: list[Element]) -> Element | None:
@@ -315,7 +360,7 @@ def start_element(tag: str, attrs: dict, raw: str, stack: list[Element]) -> Elem
     element = Element(tag, attrs, raw, None)
     css = _parse_style(attrs.get("style") or "")
 
-    if tag in TABLE_SECTION_TAGS:
+    if tag in _TRANSPARENT_TAGS:
         return element
 
     if tag in _INLINE_TAGS:
@@ -326,8 +371,12 @@ def start_element(tag: str, attrs: dict, raw: str, stack: list[Element]) -> Elem
         wrappers = _style_wrappers(attrs, css)
         return _chain(element, wrappers) if wrappers else element
 
-    if tag in ("code", "kbd"):
-        return _chain(element, [{"type": "codespan", "children": []}])
+    if tag == "small":
+        # [SIZE=3] is 12px on XenForo, where normal text is 15px.
+        return _chain(element, [{"type": "font", "children": [], "attrs": {"size": "3"}}] + _style_wrappers(attrs, css))
+
+    if tag in _CODE_SPAN_TAGS:
+        return _chain(element, [{"type": _CODE_SPAN_TAGS[tag], "children": []}])
 
     if tag == "pre":
         element.language = _code_language(attrs)
@@ -361,12 +410,22 @@ def start_element(tag: str, attrs: dict, raw: str, stack: list[Element]) -> Elem
             tokens.insert(0, {"type": "div", "children": [], "attrs": {"align": align}})
         return _chain(element, tokens)
 
-    if tag in ("p", "div"):
+    if tag in ("p", "div", "figure"):
+        # A <figure> is a box around an image and its caption, which is what a <div> is.
         token = {"type": "paragraph" if tag == "p" else "div", "children": []}
         align = _alignment(attrs, css)
         if align:
             token["attrs"] = {"align": align}
         return _chain(element, [token] + _style_wrappers(attrs, css))
+
+    if tag in _CAPTION_PARENTS:
+        if not stack or stack[-1].tag != _CAPTION_PARENTS[tag]:
+            return None
+        # A table's caption moves above the table when </caption> closes it; see _Pairer._lift_caption.
+        return _chain(element, [{"type": "caption", "children": []}])
+
+    if tag in _DEFINITION_TAGS:
+        return _chain(element, [{"type": _DEFINITION_TAGS[tag], "children": []}])
 
     if tag == "blockquote":
         token = {"type": "block_quote", "children": []}
@@ -412,7 +471,7 @@ def start_element(tag: str, attrs: dict, raw: str, stack: list[Element]) -> Elem
 def finish_element(element: Element, parent: Element | None) -> None:
     """Finish code spans and code blocks once their content is ready."""
     token = element.token
-    if element.tag in ("code", "kbd"):
+    if element.tag in _CODE_SPAN_TAGS:
         token["raw"] = unescape_references(plain_text(token.pop("children")))
         if element.tag == "code" and parent is not None and parent.tag == "pre" and not parent.language:
             parent.language = _code_language(element.attrs)

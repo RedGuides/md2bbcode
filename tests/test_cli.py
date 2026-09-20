@@ -175,6 +175,30 @@ def test_link_base_image_base_and_domain(readme, capsys):
     ]
 
 
+@pytest.mark.parametrize(
+    "entry, text",
+    [
+        (md2bbcode_main.main, "[file](guide.md) ![](asset)"),
+        (md2bbcode_main.html2bbcode_main, '<a href="guide.md">file</a> <img src="asset">'),
+    ],
+    ids=["md2bbcode", "html2bbcode"],
+)
+@pytest.mark.parametrize("image_base", [None, "https://cdn.example/"])
+def test_github_domain_infers_image_base_unless_overridden(entry, text, image_base, tmp_path, capsys):
+    src = tmp_path / "input.txt"
+    src.write_text(text, encoding="utf-8")
+    args = [str(src), "--domain", "https://github.com/o/r/blob/main/docs/"]
+    if image_base:
+        args.extend(["--image-base", image_base])
+
+    entry(args)
+
+    out, err = capsys.readouterr()
+    expected_base = image_base or "https://raw.githubusercontent.com/o/r/main/docs/"
+    assert err == ""
+    assert out == f"[URL=https://github.com/o/r/blob/main/docs/guide.md]file[/URL] [IMG]{expected_base}asset[/IMG]\n"
+
+
 def test_dump_config_needs_no_input_and_is_a_working_config(board, readme, tmp_path, capsys):
     dumped = tmp_path / "dumped.toml"
     md2bbcode_main.main(["--dump-config", "--config", board, "-o", str(dumped)])

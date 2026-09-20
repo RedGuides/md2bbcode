@@ -8,10 +8,11 @@ def test_free_text_options_are_quoted_in_the_built_in_templates():
     # An unquoted option ends at the first ], which a title or alt text may contain.
     board = Dialect.defaults()
     assert board.tags["block_spoiler"] == '[SPOILER="{title}"]{text}[/SPOILER]'
-    assert board.tags["image_alt"] == '[IMG alt="{alt}"]{url}[/IMG]'
     assert board.tags["block_quote_author"].startswith('[QUOTE="{author}"]')
     assert board.tags["abbr"] == '[ABBR="{title}"]{text}[/ABBR]'
-    assert "title" in TAGS["block_spoiler"] and "alt" in TAGS["image_alt"]
+    assert "title" in TAGS["block_spoiler"]
+    # An image's options are written by the renderer, which quotes each one.
+    assert html_to_bbcode('<img src="x.png" alt="a]b" width="20">') == '[IMG alt="a]b" width="20px"]x.png[/IMG]'
 
 
 def test_a_spoiler_title_is_the_summary_as_plain_text():

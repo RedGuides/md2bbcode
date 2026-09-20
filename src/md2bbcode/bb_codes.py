@@ -10,6 +10,7 @@ _BY_HTML = {
     "mark": None,
     "superscript": None,
     "subscript": None,
+    "kbd": None,
     "abbr": "title",
     "anchor": "name",
     "link_anchor": "anchor",
@@ -22,6 +23,7 @@ _BY_NAME = {
     "mark": ("mark", None),
     "sup": ("superscript", None),
     "sub": ("subscript", None),
+    "kbd": ("kbd", None),
     "abbr": ("abbr", "title"),
 }
 

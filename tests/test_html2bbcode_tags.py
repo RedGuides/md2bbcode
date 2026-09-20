@@ -19,7 +19,7 @@ def test_html_basic_formatting_and_links():
     assert "[s]strike[/s]" in lowered
     assert "[u]insert[/u]" in lowered
     assert "[mark]mark[/mark]" in lowered
-    assert "[icode]kbd[/icode]" in lowered
+    assert "[kbd]kbd[/kbd]" in lowered
     assert "[url=https://example.com]link[/url]" in lowered
     assert "[img alt=\"alt text\"]https://example.com/x.png[/img]" in lowered
     assert "[hr][/hr]" in lowered

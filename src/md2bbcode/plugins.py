@@ -82,6 +82,8 @@ _TABLE = {"table"}
 _CELLS = {"td", "th"}
 _ROW_AND_CELLS = {"tr", "td", "th"}
 _INSIDE_A_TABLE = TABLE_SECTION_TAGS | _ROW_AND_CELLS
+_DEFINITION_LIST = {"dl"}
+_TERMS_AND_DEFINITIONS = {"dt", "dd"}
 
 # When one of these tags starts, it closes any open tag in the first set, but never looks
 # past a tag in the second: a new <li> cannot close an item outside its own list.
@@ -93,6 +95,8 @@ _CLOSED_BY_START = {
     "thead": (_INSIDE_A_TABLE, _TABLE),
     "tbody": (_INSIDE_A_TABLE, _TABLE),
     "tfoot": (_INSIDE_A_TABLE, _TABLE),
+    "dt": (_TERMS_AND_DEFINITIONS, _DEFINITION_LIST),
+    "dd": (_TERMS_AND_DEFINITIONS, _DEFINITION_LIST),
 }
 # A new block ends the current paragraph.
 _CLOSES_P = {
@@ -100,7 +104,7 @@ _CLOSES_P = {
     "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr", "main", "menu", "nav",
     "ol", "p", "pre", "section", "summary", "table", "ul",
 }
-_P_BOUNDARY = {"blockquote", "details", "div", "li", "ol", "summary", "table", "td", "th", "ul"}
+_P_BOUNDARY = {"blockquote", "dd", "details", "div", "figure", "li", "ol", "summary", "table", "td", "th", "ul"}
 # A closing tag looks for its opening tag, but never outside its list or table.
 _END_BOUNDARY = {
     "li": LIST_TAGS,
@@ -110,20 +114,23 @@ _END_BOUNDARY = {
     "thead": _TABLE,
     "tbody": _TABLE,
     "tfoot": _TABLE,
+    "dt": _DEFINITION_LIST,
+    "dd": _DEFINITION_LIST,
 }
 # These tags can end when their parent ends.
-_OPTIONAL_END = TABLE_SECTION_TAGS | {"p", "li", "tr", "td", "th"}
+_OPTIONAL_END = TABLE_SECTION_TAGS | {"p", "li", "tr", "td", "th", "dt", "dd"}
 
 # Skip document wrappers and hidden content.
 _DROPPED_TAGS = {"html", "body"}
 _DROPPED_WITH_CONTENT = {"head", "script", "style"}
 _ALL_DROPPED = _DROPPED_TAGS | _DROPPED_WITH_CONTENT
 
-# Loose text is wrapped in a block of this type: always inside a <div>, and inside the
-# others only when it sits beside blocks.
-_BOX_ALWAYS = {"div": "paragraph"}
+# Loose text is wrapped in a block of this type: always inside a <div> or <figure>, and
+# inside the others only when it sits beside blocks.
+_BOX_ALWAYS = {"div": "paragraph", "figure": "paragraph"}
 _BOX_BESIDE_BLOCKS = {
     "li": "block_text",
+    "dd": "block_text",
     "td": "paragraph",
     "th": "paragraph",
     "blockquote": "paragraph",
@@ -237,6 +244,9 @@ class _Pairer:
             self._push(Element(tag, attrs, raw, None, children=[]))
             return
         if tag in VOID_TAGS:
+            if tag == "wbr" or (tag == "source" and any(parent.tag == "picture" for parent in self.stack)):
+                # A hint for line wrapping, or another version of a <picture>'s <img>: nothing to show.
+                return
             self.add(void_token(tag, attrs) or _raw_html(raw))
             return
         if tag not in CONVERTED_TAGS:
@@ -301,6 +311,8 @@ class _Pairer:
 
         if element.tag == "summary":
             self._lift_title(element)
+        elif element.tag == "caption":
+            self._lift_caption(element)
         else:
             finish_element(element, self.stack[-1] if self.stack else None)
 
@@ -310,6 +322,14 @@ class _Pairer:
         if summary.token["children"]:
             details = self.stack[-1]
             details.token["attrs"] = {"title": summary.token["children"]}
+
+    def _lift_caption(self, caption: Element) -> None:
+        """Move a closed <caption> out of the table, which has no tag for it, to the line above."""
+        del caption.parent_list[caption.index]
+        table = self.stack[-1]
+        # Boxed as a <figure>'s caption is, so text before it keeps a paragraph's distance.
+        table.parent_list.insert(table.index, {"type": "div", "children": [caption.token]})
+        table.index += 1
 
     def _put_back(self, element: Element) -> None:
         """Restore an unclosed tag as HTML, keeping its content."""
@@ -368,6 +388,17 @@ _XF_LATIN_TO_ASCII = str.maketrans({
     "«": "<<", "»": ">>", "‹": "<", "›": ">",
     "‐": "-", "‑": "-", "‒": "-", "–": "-", "—": "-", "―": "-",
 })
+
+
+# An emoji shortcode such as :rocket:, but not the middle of 10:30:45 or a:b:c.
+_SHORTCODE_RE = re.compile(r"(?<!\w):[a-z0-9_+-]+:(?!\w)")
+
+
+def emoji_shortcodes(text: str) -> str:
+    """Turn GitHub's emoji shortcodes into the emoji: ":rocket:" -> "🚀". Unknown names stay as written."""
+    if ":" not in text:
+        return text
+    return _SHORTCODE_RE.sub(lambda match: emoji.emojize(match.group(0), language="alias"), text)
 
 
 def _emoji_name(chars: str, data: dict) -> str:
@@ -449,5 +480,6 @@ def heading_anchors(tokens: list[dict]) -> dict[str, str]:
         text = unescape_references(plain_text(token.get("children", [])))
         # GitHub's first repeat is "slug-1"; XenForo's is "anchor-2".
         slug = _numbered(github_slug(text), github_counts, 1)
-        anchors.setdefault(slug, _numbered(xenforo_anchor(text), xenforo_counts, 2))
+        # The board sees the emoji, not the shortcode it was written as.
+        anchors.setdefault(slug, _numbered(xenforo_anchor(emoji_shortcodes(text)), xenforo_counts, 2))
     return anchors

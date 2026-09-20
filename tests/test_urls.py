@@ -55,6 +55,10 @@ def test_resolve_url_without_a_base_only_neutralises_harmful_urls(url, expected)
         ({"link_base": LINK_BASE}, (LINK_BASE, LINK_BASE)),
         ({"image_base": IMAGE_BASE}, (IMAGE_BASE, IMAGE_BASE)),
         ({"link_base": LINK_BASE, "image_base": IMAGE_BASE}, (LINK_BASE, IMAGE_BASE)),
+        ({"domain": LINK_BASE}, (LINK_BASE, IMAGE_BASE)),
+        ({"domain": LINK_BASE, "link_base": "https://docs.example/"}, ("https://docs.example/", IMAGE_BASE)),
+        ({"domain": LINK_BASE, "image_base": "https://cdn.example/"}, (LINK_BASE, "https://cdn.example/")),
+        ({"domain": LINK_BASE, "image_base": LINK_BASE}, (LINK_BASE, LINK_BASE)),
         ({"domain": "https://d.example/"}, ("https://d.example/", "https://d.example/")),
         ({"domain": "https://d.example/", "image_base": IMAGE_BASE}, ("https://d.example/", IMAGE_BASE)),
         ({"domain": "", "link_base": ""}, (None, None)),
@@ -64,12 +68,101 @@ def test_resolve_bases_fallback(given, expected):
     assert resolve_bases(**given) == expected
 
 
+@pytest.mark.parametrize(
+    "domain, image_base",
+    [
+        ("https://github.com/o/r/blob/main/", "https://raw.githubusercontent.com/o/r/main/"),
+        (LINK_BASE, IMAGE_BASE),
+        ("https://github.com/o/r/blob/feature/topic/docs/", "https://raw.githubusercontent.com/o/r/feature/topic/docs/"),
+        ("https://github.com/o/r/blob/release%2Fv1/my%20docs/", "https://raw.githubusercontent.com/o/r/release%2Fv1/my%20docs/"),
+        (LINK_BASE + "?download=1#part", IMAGE_BASE + "?download=1#part"),
+        ("http://GITHUB.COM/o/r/blob/main/", "http://raw.githubusercontent.com/o/r/main/"),
+    ],
+)
+def test_github_domain_preserves_ref_path_and_url_components(domain, image_base):
+    assert resolve_bases(domain=domain) == (domain, image_base)
+
+
+@pytest.mark.parametrize(
+    "domain",
+    [
+        # What people copy from the address bar: the repo's home page, or a folder.
+        "https://github.com/o/r",
+        "https://github.com/o/r/",
+        "https://www.github.com/o/r",
+    ],
+)
+def test_a_github_home_page_uses_the_default_branch(domain):
+    host = domain.split("/o/r")[0]
+    assert resolve_bases(domain=domain) == (f"{host}/o/r/blob/HEAD/", "https://raw.githubusercontent.com/o/r/HEAD/")
+
+
+@pytest.mark.parametrize(
+    "domain, link_base, image_base",
+    [
+        ("https://github.com/o/r/tree/main", "https://github.com/o/r/blob/main/", "https://raw.githubusercontent.com/o/r/main/"),
+        ("https://github.com/o/r/tree/main/docs", "https://github.com/o/r/blob/main/docs/", "https://raw.githubusercontent.com/o/r/main/docs/"),
+        ("https://github.com/o/r/tree/main/docs/", "https://github.com/o/r/blob/main/docs/", "https://raw.githubusercontent.com/o/r/main/docs/"),
+        # A branch on its own gets its missing slash; a file does not, and its folder is used.
+        ("https://github.com/o/r/blob/main", "https://github.com/o/r/blob/main/", "https://raw.githubusercontent.com/o/r/main/"),
+        ("https://github.com/o/r/blob/main/README.md", "https://github.com/o/r/blob/main/README.md", "https://raw.githubusercontent.com/o/r/main/README.md"),
+    ],
+)
+def test_a_github_folder_url_and_a_missing_slash(domain, link_base, image_base):
+    assert resolve_bases(domain=domain) == (link_base, image_base)
+    # Overrides still win.
+    assert resolve_bases(domain=domain, link_base="https://docs.example/") == ("https://docs.example/", image_base)
+    assert resolve_bases(domain=domain, image_base="https://cdn.example/") == (link_base, "https://cdn.example/")
+
+
+def test_the_repo_home_page_is_enough_for_a_readme():
+    result = convert("[guide](docs/guide.md) ![](img/logo.png)", domain="https://github.com/o/r")
+    assert result == (
+        "[URL=https://github.com/o/r/blob/HEAD/docs/guide.md]guide[/URL] "
+        "[IMG]https://raw.githubusercontent.com/o/r/HEAD/img/logo.png[/IMG]\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "domain",
+    [
+        "https://example.com/o/r/blob/main/",
+        "https://github.com.example.com/o/r/blob/main/",
+        "https://github.com@elsewhere.example/o/r/blob/main/",
+        IMAGE_BASE,
+        "https://github.com/o/r/issues",
+        "https://github.com/o/r/wiki/Home",
+        "https://github.com/o",
+        "https://github.com/o/r/blob/",
+        "https://github.com/o/r/blob//docs/",
+        "https://github.com//r/blob/main/",
+        "https://github.com/o//blob/main/",
+        "https://[oops",
+        "ftp://github.com/o/r/blob/main/",
+    ],
+)
+def test_domain_without_a_recognized_github_url_is_unchanged(domain):
+    assert resolve_bases(domain=domain) == (domain, domain)
+
+
+@pytest.mark.parametrize("url", ["asset", "logo.png", "image.custom", "../asset", "https://cdn.example/asset", "//cdn.example/asset"])
+def test_github_domain_uses_markup_not_file_extensions(url):
+    link = resolve_url(url, LINK_BASE)
+    image = resolve_url(url, IMAGE_BASE)
+    expected = f'[URL={link}]file[/URL] [IMG]{image}[/IMG]'
+    html = f'<a href="{url}">file</a> <img src="{url}">'
+
+    assert convert(f"[file]({url}) ![]({url})", domain=LINK_BASE).rstrip("\n") == expected
+    assert html_to_bbcode(html, domain=LINK_BASE) == expected
+    assert convert(html, domain=LINK_BASE).rstrip("\n") == expected
+
+
 BASE_CASES = {
     "neither": ({}, "guide.md", "logo.png"),
     "link base only": ({"link_base": LINK_BASE}, LINK_BASE + "guide.md", LINK_BASE + "logo.png"),
     "image base only": ({"image_base": IMAGE_BASE}, IMAGE_BASE + "guide.md", IMAGE_BASE + "logo.png"),
     "both": ({"link_base": LINK_BASE, "image_base": IMAGE_BASE}, LINK_BASE + "guide.md", IMAGE_BASE + "logo.png"),
-    "domain": ({"domain": LINK_BASE}, LINK_BASE + "guide.md", LINK_BASE + "logo.png"),
+    "domain": ({"domain": LINK_BASE}, LINK_BASE + "guide.md", IMAGE_BASE + "logo.png"),
 }
 
 

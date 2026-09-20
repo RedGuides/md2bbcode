@@ -27,7 +27,7 @@ Some ==highlighted== text and a footnote.[^1]
 
 ---
 
-Water is H<sub>2</sub>O.
+Water is H<sub>2</sub>O. Press <kbd>Ctrl</kbd>.
 
 The HTML specification is maintained by the W3C.
 

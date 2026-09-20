@@ -22,6 +22,8 @@ TAGS = {
     "superscript": ("text",),
     "subscript": ("text",),
     "codespan": ("text",),
+    "kbd": ("text",),
+    "inline_quote": ("text",),
     "inline_spoiler": ("text",),
     "abbr": ("text", "title"),
     "link": ("text", "url"),
@@ -35,7 +37,8 @@ TAGS = {
     "font_size": ("text", "size"),
     "font_face": ("text", "face"),
     "image": ("url",),
-    "image_alt": ("url", "alt"),
+    # {options} lists what the image has, from alt, width, height and align: alt="Logo" width="200px"
+    "image_options": ("url", "options"),
     "pixelate": ("text",),
     "linebreak": (),
     # blocks
@@ -50,6 +53,7 @@ TAGS = {
     "block_spoiler": ("text", "title"),
     "block_spoiler_notitle": ("text",),
     "block_error": ("text",),
+    "caption": ("text",),
     # lists
     "list_ordered": ("text",),
     "list_unordered": ("text",),
@@ -295,6 +299,9 @@ class Dialect:
             custom = {}
 
         merged = {**base.tags, "heading": dict(base.headings), **custom, **tags}
+        if "kbd" not in custom and "kbd" not in tags:
+            # Without a [KBD] BB code a key is shown as inline code, whatever the config makes of that.
+            merged["kbd"] = merged["codespan"]
         if isinstance(tags.get("heading"), dict):
             # Keep heading levels not changed by the config. TOML keys are text, so ours become text too.
             levels = {}

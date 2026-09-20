@@ -35,9 +35,12 @@ def test_every_tag_name_is_written_in_one_case():
 
 
 def test_issue_2_override_changes_markdown_and_html_code_spans():
-    board = _dialect('[tags]\ncodespan = "[code]{text}[/code]"\n')
-    result = convert("Run `pip` then <code>hatch</code> or <kbd>Ctrl</kbd>.", dialect=board)
-    assert result == "Run [code]pip[/code] then [code]hatch[/code] or [code]Ctrl[/code].\n"
+    source = "Run `pip` then <code>hatch</code> or <kbd>Ctrl</kbd>."
+    config = '[tags]\ncodespan = "[code]{text}[/code]"\n'
+    # A key follows inline code, unless the board has a BB code for keys.
+    stock = _dialect(config, bb_codes=False)
+    assert convert(source, dialect=stock) == "Run [code]pip[/code] then [code]hatch[/code] or [code]Ctrl[/code].\n"
+    assert convert(source, dialect=_dialect(config)) == "Run [code]pip[/code] then [code]hatch[/code] or [KBD]Ctrl[/KBD].\n"
 
 
 def test_a_config_keeps_every_tag_it_does_not_name():
@@ -117,7 +120,7 @@ def test_unknown_html_is_kept_or_stripped():
 
 
 def test_dumped_config_loads_back_to_the_same_dialect():
-    board = _dialect('unknown_html = "strip"\n[tags]\nimage_alt = "[img=\\"{alt}\\"]{url}[/img]"\nheading = { 4 = "[h4]{text}[/h4]" }\n')
+    board = _dialect('unknown_html = "strip"\n[tags]\nimage_options = "[img {options}]{url}[/img]"\nheading = { 4 = "[h4]{text}[/h4]" }\n')
     again = Dialect.from_dict(tomllib.loads(board.to_toml()), source="dump")
     assert (again.unknown_html, again.tags, again.headings, again.paragraph_separator) == (
         board.unknown_html, board.tags, board.headings, board.paragraph_separator,

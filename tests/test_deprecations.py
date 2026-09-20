@@ -22,8 +22,9 @@ def test_process_readme_still_converts_a_readme():
         result = process_readme(markdown, domain="")
 
     assert result == convert(markdown, domain="")
+    # A few tags the README happens to use, so a silently empty conversion fails here.
     lowered = result.lower()
-    for bbcode in ["[img alt", "[icode]", "[heading=1]", "[b]", "[heading=2]", "[code=bash]", "[sup]2[/sup]"]:
+    for bbcode in ["[img alt", "[icode]", "[heading=1]", "[b]", "[heading=2]", "[code=bash]", "[spoiler="]:
         assert bbcode in lowered, f"Expected BBCode not found: {bbcode}"
 
 

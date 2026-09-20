@@ -1,12 +1,12 @@
 import re
-from urllib.parse import unquote, urljoin, urlparse
+from urllib.parse import unquote, urldefrag, urljoin, urlparse
 
 from mistune import BaseRenderer, safe_entity
 
 from md2bbcode.dialect import get_dialect
 from md2bbcode.html_tokens import BLOCK_TOKEN_TYPES, plain_text, unescape_references
 from md2bbcode.image_rewrite import rewrite_svg_url
-from md2bbcode.plugins import heading_anchors, pair_html
+from md2bbcode.plugins import emoji_shortcodes, heading_anchors, pair_html
 
 _HARMFUL_SCHEMES = ('javascript:', 'vbscript:', 'data:')
 
@@ -16,6 +16,11 @@ _FLOW_BLOCKS = {'paragraph', 'block_text', 'div'}
 
 # Where the heading map is kept, so the footnote pass can see it too.
 _ANCHORS = 'heading_anchors'
+
+# GitHub shows an image whose URL ends in one of these in that theme only. A forum post
+# cannot follow the reader's theme, so the light image is posted and the dark one is left out.
+_LIGHT_ONLY = 'gh-light-mode-only'
+_DARK_ONLY = 'gh-dark-mode-only'
 
 # A GitHub alert marker at the start of a quote: "[!NOTE]", "[!TIP]" and so on.
 _ALERT_MARKER_RE = re.compile(r"^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*", re.IGNORECASE)
@@ -65,10 +70,55 @@ def resolve_url(url: str, base=None) -> str:
         return url
 
 
+def _github_bases(domain: str):
+    """Return the link and image bases for a GitHub repository URL, or None for any other URL.
+
+    Links open GitHub's file viewer (blob) and images need the file itself (raw):
+
+        https://github.com/o/r                   the repo's home page
+        https://github.com/o/r/tree/main/docs    a folder, as the address bar shows it
+        https://github.com/o/r/blob/main/docs/   the file viewer
+    """
+    try:
+        parsed = urlparse(domain)
+    except ValueError:
+        return None
+    if parsed.scheme not in ('http', 'https') or parsed.netloc.lower() not in ('github.com', 'www.github.com'):
+        return None
+
+    # "/o/r/blob/main/docs/" -> "", "o", "r", "blob", "main/docs/"
+    parts = parsed.path.split('/', 4)
+    parts += [''] * (5 - len(parts))
+    _, owner, repo, view, path = parts
+    if not owner or not repo:
+        return None
+    if not view and not path:
+        # The home page names no branch. HEAD is the default branch, whatever it is called.
+        view, path = 'blob', 'HEAD/'
+    if view not in ('blob', 'tree') or not path.split('/', 1)[0]:
+        return None
+    if not path.endswith('/') and (view == 'tree' or '/' not in path):
+        # A folder, or a branch on its own such as blob/main. Without the slash the last
+        # part would be replaced, not added to. blob/main/README.md is a file and needs none.
+        path += '/'
+
+    # GitHub sends a tree URL for a file to blob, and a blob URL for a folder to tree.
+    links = parsed._replace(path=f'/{owner}/{repo}/blob/{path}').geturl()
+    images = parsed._replace(netloc='raw.githubusercontent.com', path=f'/{owner}/{repo}/{path}').geturl()
+    return links, images
+
+
 def resolve_bases(link_base=None, image_base=None, domain=None):
-    """Use ``domain`` for missing bases, then share either base if only one is set."""
+    """Use ``domain`` for missing bases, then share either base if only one is set.
+
+    A GitHub ``domain`` gives links and images a base each; see _github_bases.
+    """
     links = link_base or domain or image_base or None
     images = image_base or domain or link_base or None
+    github = _github_bases(domain) if domain else None
+    if github:
+        links = link_base or github[0]
+        images = image_base or github[1]
     return links, images
 
 
@@ -176,8 +226,8 @@ class BBCodeRenderer(BaseRenderer):
         return func(**attrs)
 
     def text(self, text: str) -> str:
-        # Decode HTML escapes in text, not code.
-        return unescape_references(text)
+        # Decode HTML escapes and emoji shortcodes in text, not code.
+        return emoji_shortcodes(unescape_references(text))
 
     def emphasis(self, text: str) -> str:
         return self.tag('emphasis', text=text)
@@ -186,18 +236,29 @@ class BBCodeRenderer(BaseRenderer):
         return self.tag('strong', text=text)
 
     def link(self, text: str, url: str, title=None) -> str:
+        if not text:
+            # Nothing to click, e.g. a link around a dark-mode image that was left out.
+            return ''
         if url.startswith('#') and len(url) > 1:
             return self.link_anchor(text, url[1:])
         return self.tag('link', text=text, url=resolve_url(url, self.link_base))
 
-    def image(self, text: str, url: str, title=None) -> str:
+    def image(self, text: str, url: str, title=None, width=None, height=None, align=None) -> str:
+        url, theme = urldefrag(url)
+        if theme == _DARK_ONLY:
+            return ''
+        if theme and theme != _LIGHT_ONLY:
+            url += '#' + theme
         safe_url = resolve_url(url, self.image_base)
         rewritten_url = rewrite_svg_url(safe_url)
         if rewritten_url is None:
             # An SVG we cannot turn into a PNG: link to it instead.
             return self.tag('link', text=text or safe_url, url=safe_url)
-        if text:
-            img_tag = self.tag('image_alt', url=rewritten_url, alt=_option(text))
+        # width, height and align come from an HTML <img>; Markdown has no way to write them.
+        options = {'alt': _option(text), 'width': width, 'height': height, 'align': align}
+        options = ' '.join(f'{name}="{value}"' for name, value in options.items() if value)
+        if options:
+            img_tag = self.tag('image_options', url=rewritten_url, options=options)
         else:
             img_tag = self.tag('image', url=rewritten_url)
         # Alt text starting with 'pixel' opts into pixel-art rendering.
@@ -207,6 +268,12 @@ class BBCodeRenderer(BaseRenderer):
 
     def codespan(self, text: str) -> str:
         return self.tag('codespan', text=text)
+
+    def kbd(self, text: str) -> str:
+        return self.tag('kbd', text=text)
+
+    def inline_quote(self, text: str) -> str:
+        return self.tag('inline_quote', text=text)
 
     def linebreak(self) -> str:
         return self.tag('linebreak')
@@ -246,6 +313,8 @@ class BBCodeRenderer(BaseRenderer):
         if not body.strip():
             # Keep standalone line breaks; render_tokens adds them to the gap.
             return text
+        # An image that was left out may leave the space beside it at either end.
+        body = body.strip(' ')
         if align:
             body = self.tag('align_' + align, text=body)
         return body + '\n'
@@ -266,6 +335,9 @@ class BBCodeRenderer(BaseRenderer):
 
     def block_text(self, text: str) -> str:
         return text + '\n'
+
+    def caption(self, text: str) -> str:
+        return self.tag('caption', text=text.rstrip('\n')) + '\n'
 
     def block_code(self, code: str, **attrs) -> str:
         # Code is left as written. The first word after the fence is the language.

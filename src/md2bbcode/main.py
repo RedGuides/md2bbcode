@@ -169,7 +169,7 @@ def _add_output_argument(parser) -> None:
 def _add_url_arguments(parser) -> None:
     parser.add_argument('--link-base', metavar='URL', help='Base URL for relative links (also images if no other base is set)')
     parser.add_argument('--image-base', metavar='URL', help='Base URL for relative images (also links if no other base is set)')
-    parser.add_argument('--domain', metavar='URL', help='Base URL for both links and images unless set separately')
+    parser.add_argument('--domain', metavar='URL', help='Base URL for links and images. A GitHub repo or folder URL works as it is: images use raw URLs. Separate bases override this.')
 
 
 def _add_dialect_arguments(parser) -> None:
