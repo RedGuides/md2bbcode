@@ -8,6 +8,9 @@ from md2bbcode.renderer import resolve_bases, resolve_url
 
 LINK_BASE = "https://github.com/o/r/blob/main/docs/"
 IMAGE_BASE = "https://raw.githubusercontent.com/o/r/main/docs/"
+# Repository roots guessed from the GitHub bases, for URLs starting with /.
+LINK_ROOT = "https://github.com/o/r/blob/main/"
+IMAGE_ROOT = "https://raw.githubusercontent.com/o/r/main/"
 
 # url, expected when joined to "<base>"
 RULES = [
@@ -24,17 +27,18 @@ RULES = [
     ("guide.md", "<base>guide.md"),
     ("./guide.md#install", "<base>guide.md#install"),
     ("../up.md", "<parent>up.md"),
-    ("/root.md", "<host>/root.md"),
+    ("/root.md", "<root>root.md"),
     ("page.md?x=1", "<base>page.md?x=1"),
 ]
 
 
-def _expected(template: str, base: str) -> str:
-    host = base.split("/", 3)
+def _expected(template: str, base: str, root=None) -> str:
+    """Fill in the template. Without a root, <root> is the host root."""
+    host = "/".join(base.split("/", 3)[:3]) + "/"
     return (
         template.replace("<base>", base)
         .replace("<parent>", base.rsplit("/", 2)[0] + "/")
-        .replace("<host>", "/".join(host[:3]))
+        .replace("<root>", root or host)
     )
 
 
@@ -183,8 +187,8 @@ def test_markdown_and_html_use_the_link_base_for_links_and_the_image_base_for_im
 
 @pytest.mark.parametrize("url, expected", RULES)
 def test_every_rule_holds_for_all_four_kinds_of_url(url, expected):
-    link = _expected(expected, LINK_BASE)
-    image = _expected(expected, IMAGE_BASE)
+    link = _expected(expected, LINK_BASE, LINK_ROOT)
+    image = _expected(expected, IMAGE_BASE, IMAGE_ROOT)
     bases = {"link_base": LINK_BASE, "image_base": IMAGE_BASE}
 
     assert html_to_bbcode(f'<img src="{url}">', **bases) == f"[IMG]{image}[/IMG]"

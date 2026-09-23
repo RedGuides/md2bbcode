@@ -39,8 +39,9 @@ PLUGINS = [strikethrough, mark, superscript, subscript, insert, table, footnotes
 class Converter:
     """Convert Markdown or HTML to BBCode with a reusable parser and renderer."""
 
-    def __init__(self, dialect=None, link_base=None, image_base=None, domain=None):
-        self.renderer = BBCodeRenderer(domain=domain, link_base=link_base, image_base=image_base, dialect=dialect)
+    def __init__(self, dialect=None, link_base=None, image_base=None, domain=None, link_root=None, image_root=None):
+        self.renderer = BBCodeRenderer(domain=domain, link_base=link_base, image_base=image_base, dialect=dialect,
+                                       link_root=link_root, image_root=image_root)
         self._markdown = mistune.create_markdown(renderer=self.renderer, plugins=PLUGINS)
         self._tokens = mistune.create_markdown(renderer=None, plugins=PLUGINS)
 
@@ -60,9 +61,15 @@ class Converter:
         return pair_html(self._tokens(text))
 
 
-def convert(markdown_text, dialect=None, link_base=None, image_base=None, domain=None) -> str:
-    """Convert Markdown, and any HTML inside it, to BBCode."""
-    return Converter(dialect=dialect, link_base=link_base, image_base=image_base, domain=domain).markdown(markdown_text)
+def convert(markdown_text, dialect=None, link_base=None, image_base=None, domain=None, link_root=None, image_root=None) -> str:
+    """Convert Markdown, and any HTML inside it, to BBCode.
+
+    ``domain``, ``link_base`` and ``image_base`` complete URLs like images/x.png.
+    ``link_root`` and ``image_root`` complete URLs like /images/x.png.
+    A GitHub ``domain`` sets all of these for you.
+    """
+    return Converter(dialect=dialect, link_base=link_base, image_base=image_base, domain=domain,
+                     link_root=link_root, image_root=image_root).markdown(markdown_text)
 
 
 def convert_markdown_to_ast(markdown_text):
@@ -70,19 +77,21 @@ def convert_markdown_to_ast(markdown_text):
     return Converter().tokens(markdown_text)
 
 
-def html_to_bbcode(html, domain=None, link_base=None, image_base=None, dialect=None) -> str:
-    """Convert an HTML document or fragment to BBCode."""
-    return Converter(dialect=dialect, link_base=link_base, image_base=image_base, domain=domain).html(html)
+def html_to_bbcode(html, domain=None, link_base=None, image_base=None, dialect=None, link_root=None, image_root=None) -> str:
+    """Convert an HTML document or fragment to BBCode. URL options work as in :func:`convert`."""
+    return Converter(dialect=dialect, link_base=link_base, image_base=image_base, domain=domain,
+                     link_root=link_root, image_root=image_root).html(html)
 
 
-def process_readme(markdown_text, domain=None, debug=False, link_base=None, image_base=None, dialect=None):
+def process_readme(markdown_text, domain=None, debug=False, link_base=None, image_base=None, dialect=None, link_root=None, image_root=None):
     """Deprecated alias for :func:`convert`; ``debug`` is kept for positional compatibility and ignored."""
     warnings.warn(
         "process_readme() is deprecated; use md2bbcode.convert()",
         DeprecationWarning,
         stacklevel=2,
     )
-    return convert(markdown_text, dialect=dialect, link_base=link_base, image_base=image_base, domain=domain)
+    return convert(markdown_text, dialect=dialect, link_base=link_base, image_base=image_base, domain=domain,
+                   link_root=link_root, image_root=image_root)
 
 
 # shared command-line functions
@@ -170,6 +179,8 @@ def _add_url_arguments(parser) -> None:
     parser.add_argument('--link-base', metavar='URL', help='Base URL for relative links (also images if no other base is set)')
     parser.add_argument('--image-base', metavar='URL', help='Base URL for relative images (also links if no other base is set)')
     parser.add_argument('--domain', metavar='URL', help='Base URL for links and images. A GitHub repo or folder URL works as it is: images use raw URLs. Separate bases override this.')
+    parser.add_argument('--link-root', metavar='URL', help='Repository root for links starting with /, like /docs/x.md. Guessed from a GitHub --domain or --link-base.')
+    parser.add_argument('--image-root', metavar='URL', help='Repository root for images starting with /, like /images/x.png. Guessed from a GitHub --domain or --link-base.')
 
 
 def _add_dialect_arguments(parser) -> None:
@@ -200,6 +211,8 @@ def base_urls(args) -> dict:
         'link_base': _checked_base_url('--link-base', args.link_base),
         'image_base': _checked_base_url('--image-base', args.image_base),
         'domain': _checked_base_url('--domain', args.domain),
+        'link_root': _checked_base_url('--link-root', args.link_root),
+        'image_root': _checked_base_url('--image-root', args.image_root),
     }
 
 

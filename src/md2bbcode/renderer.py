@@ -1,4 +1,5 @@
 import re
+from typing import NamedTuple
 from urllib.parse import unquote, urldefrag, urljoin, urlparse
 
 from mistune import BaseRenderer, safe_entity
@@ -55,30 +56,56 @@ def _block_type(token: dict, text: str):
     return None
 
 
-def resolve_url(url: str, base=None) -> str:
-    """Join relative URLs to a base and block unsafe URLs."""
+def _folder(url: str) -> str:
+    """Add a trailing slash, so joining keeps the last folder."""
+    return url if url.endswith('/') else url + '/'
+
+
+def resolve_url(url: str, base=None, root=None) -> str:
+    """Complete a URL, or block it if it is unsafe.
+
+    Relative URLs like images/x.png join ``base``.
+    URLs like /images/x.png join ``root``, the repository root, as on GitHub and GitLab.
+    """
     if url.strip().lower().startswith(_HARMFUL_SCHEMES):
         return '#harmful-link'
-    if not base or url.startswith(('#', '//')):
+    if not (base or root) or url.startswith(('#', '//')):
         return url
     try:
         if urlparse(url).scheme:
             return url
-        return urljoin(base, url)
+        if root and url.startswith('/'):
+            root = _folder(root)
+            joined = urljoin(root, url[1:])
+            # Leave paths that climb above the root, like /../x, unchanged.
+            return joined if joined.startswith(root) else url
+        return urljoin(base, url) if base else url
     except ValueError:
         # Leave invalid URLs unchanged.
         return url
 
 
-def _github_bases(domain: str):
-    """Return the link and image bases for a GitHub repository URL, or None for any other URL.
+class GitHubUrls(NamedTuple):
+    links: str        # e.g. https://github.com/o/r/blob/main/docs/
+    images: str       # e.g. https://raw.githubusercontent.com/o/r/main/docs/
+    link_root: str    # e.g. https://github.com/o/r/blob/main/
+    image_root: str   # e.g. https://raw.githubusercontent.com/o/r/main/
+
+
+def _github_bases(domain):
+    """Return GitHubUrls for a GitHub repository URL, or None for any other URL.
 
     Links open GitHub's file viewer (blob) and images need the file itself (raw):
 
         https://github.com/o/r                   the repo's home page
         https://github.com/o/r/tree/main/docs    a folder, as the address bar shows it
         https://github.com/o/r/blob/main/docs/   the file viewer
+
+    The roots assume the branch name has no slash. For a branch like feature/x,
+    pass the roots yourself.
     """
+    if not domain:
+        return None
     try:
         parsed = urlparse(domain)
     except ValueError:
@@ -95,7 +122,8 @@ def _github_bases(domain: str):
     if not view and not path:
         # The home page names no branch. HEAD is the default branch, whatever it is called.
         view, path = 'blob', 'HEAD/'
-    if view not in ('blob', 'tree') or not path.split('/', 1)[0]:
+    ref = path.split('/', 1)[0]
+    if view not in ('blob', 'tree') or not ref:
         return None
     if not path.endswith('/') and (view == 'tree' or '/' not in path):
         # A folder, or a branch on its own such as blob/main. Without the slash the last
@@ -103,9 +131,13 @@ def _github_bases(domain: str):
         path += '/'
 
     # GitHub sends a tree URL for a file to blob, and a blob URL for a folder to tree.
-    links = parsed._replace(path=f'/{owner}/{repo}/blob/{path}').geturl()
-    images = parsed._replace(netloc='raw.githubusercontent.com', path=f'/{owner}/{repo}/{path}').geturl()
-    return links, images
+    raw = parsed._replace(netloc='raw.githubusercontent.com')
+    return GitHubUrls(
+        links=parsed._replace(path=f'/{owner}/{repo}/blob/{path}').geturl(),
+        images=raw._replace(path=f'/{owner}/{repo}/{path}').geturl(),
+        link_root=parsed._replace(path=f'/{owner}/{repo}/blob/{ref}/', query='', fragment='').geturl(),
+        image_root=raw._replace(path=f'/{owner}/{repo}/{ref}/', query='', fragment='').geturl(),
+    )
 
 
 def resolve_bases(link_base=None, image_base=None, domain=None):
@@ -115,20 +147,33 @@ def resolve_bases(link_base=None, image_base=None, domain=None):
     """
     links = link_base or domain or image_base or None
     images = image_base or domain or link_base or None
-    github = _github_bases(domain) if domain else None
+    github = _github_bases(domain)
     if github:
-        links = link_base or github[0]
-        images = image_base or github[1]
+        links = link_base or github.links
+        images = image_base or github.images
     return links, images
+
+
+def resolve_roots(link_root=None, image_root=None, domain=None, link_base=None):
+    """Return the link and image roots for URLs like /images/x.png. None means use the base.
+
+    Roots you pass win. Otherwise they're guessed from a GitHub ``domain`` or ``link_base``.
+    Other sites, GitLab included, get no guess.
+    """
+    github = _github_bases(domain) or _github_bases(link_base)
+    if github:
+        return link_root or github.link_root, image_root or github.image_root
+    return link_root or None, image_root or None
 
 
 class BBCodeRenderer(BaseRenderer):
     """Render parsed Markdown and HTML as BBCode."""
     NAME = 'bbcode'
 
-    def __init__(self, domain=None, link_base=None, image_base=None, dialect=None):
+    def __init__(self, domain=None, link_base=None, image_base=None, dialect=None, link_root=None, image_root=None):
         super().__init__()
         self.link_base, self.image_base = resolve_bases(link_base, image_base, domain)
+        self.link_root, self.image_root = resolve_roots(link_root, image_root, domain, link_base)
         self.dialect = get_dialect(dialect)
         self.anchors = {}
 
@@ -241,7 +286,7 @@ class BBCodeRenderer(BaseRenderer):
             return ''
         if url.startswith('#') and len(url) > 1:
             return self.link_anchor(text, url[1:])
-        return self.tag('link', text=text, url=resolve_url(url, self.link_base))
+        return self.tag('link', text=text, url=resolve_url(url, self.link_base, self.link_root))
 
     def image(self, text: str, url: str, title=None, width=None, height=None, align=None) -> str:
         url, theme = urldefrag(url)
@@ -249,7 +294,7 @@ class BBCodeRenderer(BaseRenderer):
             return ''
         if theme and theme != _LIGHT_ONLY:
             url += '#' + theme
-        safe_url = resolve_url(url, self.image_base)
+        safe_url = resolve_url(url, self.image_base, self.image_root)
         rewritten_url = rewrite_svg_url(safe_url)
         if rewritten_url is None:
             # An SVG we cannot turn into a PNG: link to it instead.
